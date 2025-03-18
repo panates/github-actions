@@ -1,19 +1,19 @@
-# NodeJS Quality Check Workflow
+# Sonar Analysis Workflow
 
-This is a reusable GitHub Actions workflow for performing quality checks on a NodeJS repository.
+This is a reusable GitHub Actions workflow for running SonarQube analysis on a repository.
 
 ## Usage
 
 To use this workflow in your GitHub repository, include the following in your workflow YAML file:
 
 ```yaml
-type: workflow_call
-
 jobs:
-  call-quality-check:
-    uses: panates/github-actions/.github/workflows/node-qc.yaml@v1
+  call-sonar-analysis:
+    uses: panates/github-actions/.github/workflows/sonar.yml@main
     secrets:
       PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 ```
 
 ## Workflow Details
@@ -23,7 +23,5 @@ This workflow is designed to be called by other workflows and does not run indep
 
 ### Secrets:
 - `PERSONAL_ACCESS_TOKEN` **(required)**: A GitHub personal access token for authentication.
-
-## Requirements
-- This workflow requires Node.js and npm.
-- Ensure the `qc` script is defined in `package.json`.
+- `SONAR_HOST_URL` **(required)**: The SonarQube server URL.
+- `SONAR_TOKEN` **(required)**: The authentication token for SonarQube.

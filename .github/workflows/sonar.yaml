@@ -1,0 +1,38 @@
+name: Sonar
+on:
+  workflow_call:
+    secrets:
+      PERSONAL_ACCESS_TOKEN:
+        required: true
+      SONAR_HOST_URL:
+        required: true
+      SONAR_TOKEN:
+        required: true
+
+jobs:
+  sonar-analysis:
+    name: 'Sonar Analysis'
+    runs-on: self-hosted
+    secrets:
+      SONAR_HOST_URL:
+        required: true
+      SONAR_TOKEN:
+        required: true
+
+    steps:
+      - name: "Check Required Secrets"
+        run: |
+          if [[ -z "${{ secrets.SONAR_HOST_URL }}" || -z "${{ secrets.SONAR_TOKEN }}" ]]; then
+            echo "❌ Required secrets are missing!"
+            exit 1
+          fi
+
+      - name: 'Check out the repository'
+        uses: actions/checkout@v4
+
+      - name: 'Sonar Processing'
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/usr/src" \
+          -e SONAR_HOST_URL=${{ secrets.SONAR_HOST_URL }} \
+          -e SONAR_TOKEN=${{ secrets.SONAR_TOKEN }} \
+          sonarsource/sonar-scanner-cli
