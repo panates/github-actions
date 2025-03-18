@@ -1,0 +1,35 @@
+name: Quality Check
+on:
+  workflow_call:
+    secrets:
+      PERSONAL_ACCESS_TOKEN:
+        required: true
+
+jobs:
+
+  # ***********************************
+  # Job: Quality Check
+  # ***********************************
+  qc:
+    name: Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Step 1
+      - name: Setup Environment
+        uses: panates/gh-setup-node@v1
+        with:
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          install-deps: "false"
+          cache: "true"
+          cache-key: "dev"
+
+      - name: Install dev dependencies
+        run: |
+          npm install --only=dev --no-save
+          npm install rman -g
+
+      - name: Run QC Tests
+        run: |
+          npm run qc          
