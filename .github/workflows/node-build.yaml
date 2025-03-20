@@ -44,8 +44,8 @@ jobs:
           configurationJson: |
             {
               "template": "#{{CHANGELOG}}\n## Contributors:\n- #{{CONTRIBUTORS}}",
-              "pr_template": "◉ #{{TITLE}}  (##{{NUMBER}}) - #{{AUTHOR}}",
-              "commit_template": "◉ #{{TITLE}} - #{{AUTHOR}}",
+              "pr_template": "◉ #{{TITLE}}  (##{{NUMBER}}) - (#{{AUTHOR}})",
+              "commit_template": "◉ #{{TITLE}} - (#{{AUTHOR}})",
               "empty_template": "◉ no changes",
               "categories": [
                 {
