@@ -8,9 +8,11 @@
     "tag:push": "git push origin --tags",
     "build": ""
   },
-  "devDependencies": {
-    "esbuild": "^0.25.1",
+  "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.1",
   }
 }
