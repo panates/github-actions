@@ -2,6 +2,10 @@ name: "Release"
 on:
   workflow_call:
     inputs:
+      build_script:
+        type: string
+        description: "Build script to be executed"
+        default: 'npm run build'
       dockerize:
         type: string
         description: "Determines if docker image will be created"
@@ -26,22 +30,27 @@ jobs:
   # ***********************************
   build:
     name: Build Packages
-    runs-on: ubuntu-latest
-    outputs:
-      releaseFiles: ${{ steps.publish.outputs.releaseFiles }}
-      releaseFilesArray: ${{ steps.publish.outputs.releaseFilesArray }}
-      appFiles: ${{ steps.publish.outputs.appFiles }}
-      appFilesArray: ${{ steps.publish.outputs.appFilesArray }}
-      libFiles: ${{ steps.publish.outputs.libFiles }}
-      libFilesArray: ${{ steps.publish.outputs.libFilesArray }}
+    uses: ./.gihthub/workflows/node-build.yaml
+    with:
+      build_script:  ${{ inputs.build_script }}
+    secrets:
+      PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
-    steps:
-      - name: 'Setup Environment'
-        uses: panates/gh-setup-node@v1
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          fetch-depth: 0
+#    outputs:
+#      releaseFiles: ${{ steps.publish.outputs.releaseFiles }}
+#      releaseFilesArray: ${{ steps.publish.outputs.releaseFilesArray }}
+#      appFiles: ${{ steps.publish.outputs.appFiles }}
+#      appFilesArray: ${{ steps.publish.outputs.appFilesArray }}
+#      libFiles: ${{ steps.publish.outputs.libFiles }}
+#      libFilesArray: ${{ steps.publish.outputs.libFilesArray }}
 
+#    steps:
+#      - name: 'Setup Environment'
+#        uses: panates/gh-setup-node@v1
+#        with:
+#          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+#          fetch-depth: 0
+#
 #      - name: "Build"
 #        id: publish
 #        uses: ./.github/actions/node-build
