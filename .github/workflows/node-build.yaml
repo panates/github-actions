@@ -41,6 +41,7 @@ jobs:
         shell: bash
         run: |
           PACKAGES='${{ needs.environment.outputs.packages }}'
+          echo $PACKAGES
            
           echo "Processing packages..."
           echo "$PACKAGES" | jq -c '.[]' | while IFS= read -r package; do
