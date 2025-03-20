@@ -7,12 +7,16 @@
     "tag:major": "git tag -d v1 && git push origin :refs/tags/v1 && git tag v1 v$(node -p \"require('./package.json').version\") -f",
     "tag:push": "git push origin --tags",
     "build": "node .github/actions/node-build/esbuild.config.js",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --max-warnings=0 --fix",
     "prepare": "husky"
   },
   "devDependencies": {
     "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.0",
+    "@panates/eslint-config": "^2.0.4",
     "esbuild": "^0.25.1",
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "globals": "^16.0.0"
   }
 }

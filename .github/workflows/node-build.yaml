@@ -42,10 +42,6 @@ jobs:
           outputFile: "COMMIT_CHANGELOG.md"
           configuration: 'changelog-config.json'
 
-      - name: "debug 1"
-        run: |
-          echo "${{ steps.changelog.outputs.changelog }}"
-
       - name: "debug 2"
         run: |
           cat COMMIT_CHANGELOG.md
