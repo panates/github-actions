@@ -102,24 +102,17 @@ jobs:
 #        run: |
 #          ${{ inputs.build_script }}
 #
+
       - name: Parse Directories in Bash
         shell: bash
         run: |
-          PACKAGES="${{ steps.environment.outputs.packages }}"
-          mkdir -p __publish
-          mkdir -p __release
-#          mkdir -p __publish/build
-#          mkdir -p __publish/packages
-#          mkdir -p __publish/releases
+          PACKAGES='${{ steps.environment.outputs.packages }}'
+          
           echo "Processing packages..."
           echo "$PACKAGES" | jq -c '.[]' | while IFS= read -r package; do
             name=$(echo "$package" | jq -r '.name')
             version=$(echo "$package" | jq -r '.version')
-#            directory=$(echo "$package" | jq -r '.directory')
-#            buildDir=$(echo "$package" | jq -r '.buildDir')
-
+          
             echo "Package Name: $name"
-            echo "version: $version"
-#            echo "directory: $directory"
-#            echo "buildDir: $buildDir"
+            echo "Package Version: $version"
           done
