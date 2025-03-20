@@ -37,14 +37,14 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@v5
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          fromTag: ${{ steps.environment.outputs.lastSha }}
+          fromTag: ${{ steps.environment.outputs.prevSha }}
           toTag: ${{ steps.environment.outputs.lastSha }}
           mode: COMMIT
           outputFile: "COMMIT_CHANGELOG.md"
           configurationJson: |
             {
               "template": "#{{CHANGELOG}}\n## Contributors:\n- #{{CONTRIBUTORS}}",
-              "pr_template": "- #{{TITLE}}\n   - PR: ##{{NUMBER}}",
+              "pr_template": "- (##{{NUMBER}}) #{{MERGE_SHA}}  #{{TITLE}}",
               "empty_template": "- no changes",
               "categories": [
                 {
