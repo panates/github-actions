@@ -42,7 +42,10 @@ jobs:
           mode: COMMIT
           outputFile: "COMMIT_CHANGELOG.md"
           configurationJson: |
-            {                                          
+            {
+              "template": "#{{CHANGELOG}}\n## Contributors:\n- #{{CONTRIBUTORS}}",
+              "pr_template": "- ${{TITLE}}\n   - PR: #${{NUMBER}}",
+              "empty_template": "- no changes",
               "categories": [
                 {
                     "title": "## 🚀 Features",
