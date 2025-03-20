@@ -20050,26 +20050,32 @@ async function run() {
   const rootDir = process.env.GITHUB_WORKSPACE;
   const artifactsDir = import_node_path.default.join(rootDir, "__artifacts__");
   import_node_fs.default.mkdirSync(artifactsDir, { recursive: true });
-  import_node_fs.default.cpSync(
-    import_node_path.default.join(rootDir, "COMMIT_CHANGELOG.md"),
-    import_node_path.default.join(artifactsDir, "COMMIT_CHANGELOG.md")
-  );
+  const infoFile = [];
   for (const pkg of packages) {
     core.info("Preparing", import_ansi_colors.default.magenta(`${pkg.name}`));
     const packageDir = import_node_path.default.join(rootDir, pkg.directory);
     pkg.buildDir = "src";
     const buildDir = import_node_path.default.join(packageDir, pkg.buildDir || "./");
-    if (import_node_fs.default.existsSync(buildDir)) {
+    if (!import_node_fs.default.existsSync(buildDir)) {
       core.warning("build directory do not exists. Skipping");
       continue;
     }
-    const pkgFilename = sanitizeFilename(pkg.name);
-    import_node_fs.default.writeFileSync(
-      import_node_path.default.join(artifactsDir, pkgFilename + "json"),
-      JSON.stringify(pkg, null, 2)
-    );
-    import_node_fs.default.cpSync(buildDir, artifactsDir, { recursive: true });
+    const pkgDir = sanitizeFilename(pkg.name);
+    infoFile.push({
+      ...pkg,
+      directory: pkgDir,
+      buildDir: void 0
+    });
+    import_node_fs.default.cpSync(buildDir, import_node_path.default.join(artifactsDir, pkgDir), { recursive: true });
   }
+  import_node_fs.default.writeFileSync(
+    import_node_path.default.join(artifactsDir, "packages.json"),
+    JSON.stringify(infoFile, null, 2)
+  );
+  import_node_fs.default.cpSync(
+    import_node_path.default.join(rootDir, "COMMIT_CHANGELOG.md"),
+    import_node_path.default.join(artifactsDir, "COMMIT_CHANGELOG.md")
+  );
   core.endGroup();
 }
 function sanitizeFilename(filename, replacement = "_") {

@@ -13,11 +13,8 @@ async function run() {
   const rootDir = process.env.GITHUB_WORKSPACE;
   const artifactsDir = path.join(rootDir, "__artifacts__");
   fs.mkdirSync(artifactsDir, { recursive: true });
-  fs.cpSync(
-    path.join(rootDir, "COMMIT_CHANGELOG.md"),
-    path.join(artifactsDir, "COMMIT_CHANGELOG.md"),
-  );
 
+  const infoFile = [];
   for (const pkg of packages) {
     core.info("Preparing", colors.magenta(`${pkg.name}`));
     const packageDir = path.join(rootDir, pkg.directory);
@@ -27,28 +24,26 @@ async function run() {
       core.warning("build directory do not exists. Skipping");
       continue;
     }
-    const pkgFilename = sanitizeFilename(pkg.name);
+    const pkgDir = sanitizeFilename(pkg.name);
+    infoFile.push({
+      ...pkg,
+      directory: pkgDir,
+      buildDir: undefined,
+    });
 
-    fs.writeFileSync(
-      path.join(artifactsDir, pkgFilename + "json"),
-      JSON.stringify(pkg, null, 2),
-    );
-
-    fs.cpSync(buildDir, artifactsDir, { recursive: true });
-    // core.debug("Zip file crated: " + colors.magenta(pkgFilename + ".zip"));
-    // if (pkg.isNpmPackage) {
-    //   if (pkg.version === pkg.npmPublishedVersion) {
-    //     core.info("Version is the same as published. Skipping");
-    //   } else {
-    //     core.debug("Copying files to __npm_packages__");
-    //     fs.cpSync(buildDir, npmPackagesRoot, { recursive: true });
-    //   }
-    // }
-    // if (pkg.isDockerApp) {
-    //   core.debug("Copying files to __docker_packages__");
-    //   fs.cpSync(buildDir, dockerPackagesRoot, { recursive: true });
-    // }
+    /** Copy build files to artifacts dir */
+    fs.cpSync(buildDir, path.join(artifactsDir, pkgDir), { recursive: true });
   }
+  /** Write package info to json file same basename with zip file */
+  fs.writeFileSync(
+    path.join(artifactsDir, "packages.json"),
+    JSON.stringify(infoFile, null, 2),
+  );
+  /** Copy COMMIT_CHANGELOG.md to artifacts dir */
+  fs.cpSync(
+    path.join(rootDir, "COMMIT_CHANGELOG.md"),
+    path.join(artifactsDir, "COMMIT_CHANGELOG.md"),
+  );
   core.endGroup();
 }
 
