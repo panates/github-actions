@@ -23,7 +23,7 @@ async function run() {
     const packageDir = path.join(rootDir, pkg.directory);
     pkg.buildDir = "src";
     const buildDir = path.join(packageDir, pkg.buildDir || "./");
-    if (fs.existsSync(buildDir)) {
+    if (!fs.existsSync(buildDir)) {
       core.warning("build directory do not exists. Skipping");
       continue;
     }
