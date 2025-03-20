@@ -29,7 +29,7 @@ jobs:
         id: environment
         uses: panates/gh-repository-info@v1
         with:
-          token: ${{ inputs.PERSONAL_ACCESS_TOKEN }}
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
 #      - name: "Build"
 #        shell: bash
