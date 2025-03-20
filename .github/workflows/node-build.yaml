@@ -1,0 +1,51 @@
+name: "Build"
+on:
+  workflow_call:
+    inputs:
+      build_script:
+        description: "Build script to be executed"
+        default: 'npm run build'
+    secrets:
+      PERSONAL_ACCESS_TOKEN:
+        description: "Github personal access token"
+        required: true
+
+jobs:
+  # ***********************************
+  # Job: Build Packages
+  # ***********************************
+  build:
+    name: "Build Packages"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Setup Environment"
+        uses: panates/gh-setup-node@v1
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          fetch-depth: 0
+
+      - name: "Scan Environment"
+        id: environment
+        uses: panates/gh-repository-info@v1
+        with:
+          token: ${{ inputs.PERSONAL_ACCESS_TOKEN }}
+
+#      - name: "Build"
+#        shell: bash
+#        run: |
+#          ${{ inputs.build_script }}
+#
+
+      - name: Parse Directories in Bash
+        shell: bash
+        run: |
+          PROJECTS='${{ needs.environment.outputs.projects }}'
+           
+          echo "Processing projects..."
+          echo "$PROJECTS" | jq -c '.[]' | while IFS= read -r project; do
+            name=$(echo "$project" | jq -r '.name')
+            version=$(echo "$project" | jq -r '.version')
+           
+            echo "Project Name: $name"
+            echo "Project Version: $version"
+          done

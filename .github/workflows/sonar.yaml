@@ -3,10 +3,13 @@ on:
   workflow_call:
     secrets:
       PERSONAL_ACCESS_TOKEN:
+        description: "Github personal access token"
         required: true
       SONAR_HOST_URL:
+        description: "Sonar host url"
         required: true
       SONAR_TOKEN:
+        description: "Sonar access token"
         required: true
 
 jobs:

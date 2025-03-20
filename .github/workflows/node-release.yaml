@@ -1,0 +1,111 @@
+name: "Release"
+on:
+  workflow_call:
+    inputs:
+      dockerize:
+        type: string
+        description: "Determines if docker image will be created"
+        default: 'false'
+      before_dockerize:
+        description: "Shell commands before build docker image"
+        type: string
+        default: ''
+      stage_version:
+        description: "Stage file version prefix"
+        type: string
+        default: 'v1'
+    secrets:
+      PERSONAL_ACCESS_TOKEN:
+        required: true
+      DOCKERHUB_USERNAME:
+      DOCKERHUB_PASS:
+
+jobs:
+  # ***********************************
+  # Job: Build Packages
+  # ***********************************
+  build:
+    name: Build Packages
+    runs-on: ubuntu-latest
+    outputs:
+      releaseFiles: ${{ steps.publish.outputs.releaseFiles }}
+      releaseFilesArray: ${{ steps.publish.outputs.releaseFilesArray }}
+      appFiles: ${{ steps.publish.outputs.appFiles }}
+      appFilesArray: ${{ steps.publish.outputs.appFilesArray }}
+      libFiles: ${{ steps.publish.outputs.libFiles }}
+      libFilesArray: ${{ steps.publish.outputs.libFilesArray }}
+
+    steps:
+      - name: 'Setup Environment'
+        uses: panates/gh-setup-node@v1
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          fetch-depth: 0
+
+#      - name: "Build"
+#        id: publish
+#        uses: ./.github/actions/node-build
+#        with:
+#          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+#  # ***********************************
+#  # Job: Create GitHub release
+#  # ***********************************
+#  create_lib_releases:
+#    name: 'Create Lib Releases'
+#    if: ${{ needs.publish_packages.outputs.libFiles != '' }}
+#    runs-on: ubuntu-latest
+#    needs:
+#      - publish_packages
+#    strategy:
+#      matrix:
+#        releaseFile: ${{ fromJson(needs.publish_packages.outputs.libFilesArray) }}
+#    steps:
+#      - name: Create Release
+#        uses: kimvar-inc/manifests/.github/actions/create-release@main
+#        with:
+#          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+#          file_basename: ${{matrix.releaseFile}}
+#          is_library: "true"
+#
+#  # ***********************************
+#  # Job: Create GitHub release
+#  # ***********************************
+#  create_app_releases:
+#    name: 'Create App Releases'
+#    if: ${{ always() && needs.publish_packages.outputs.appFiles != '' }}
+#    runs-on: ubuntu-latest
+#    needs:
+#      - publish_packages
+#      - create_lib_releases
+#    strategy:
+#      matrix:
+#        releaseFile: ${{ fromJson(needs.publish_packages.outputs.appFilesArray) }}
+#    steps:
+#      - name: Create Release
+#        uses: kimvar-inc/manifests/.github/actions/create-release@main
+#        with:
+#          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+#          file_basename: ${{matrix.releaseFile}}
+#          is_library: "false"
+#
+#  # ***********************************
+#  # Job: Create Docker Images
+#  # ***********************************
+#  dockerize:
+#    name: 'Create Docker Images'
+#    if: ${{ needs.publish_packages.outputs.appFiles != '' }}
+#    needs: publish_packages
+#    strategy:
+#      matrix:
+#        releaseFile: ${{ fromJson(needs.publish_packages.outputs.appFilesArray) }}
+#    uses: kimvar-inc/manifests/.github/workflows/docker-publish.yaml@main
+#    with:
+#      file_basename: ${{matrix.releaseFile}}
+#      image_prefix: "pntdockerhub/kimvar-"
+#      before_dockerize: ${{ inputs.before_dockerize }}
+#      stage_version: ${{ inputs.stage_version }}
+#    secrets:
+#      PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+#      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+#      DOCKERHUB_PASS: ${{ secrets.DOCKERHUB_PASS }}
