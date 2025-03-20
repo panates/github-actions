@@ -3,6 +3,7 @@ on:
   workflow_call:
     inputs:
       build_script:
+        type: string
         description: "Build script to be executed"
         default: 'npm run build'
     secrets:
