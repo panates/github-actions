@@ -120,7 +120,7 @@ jobs:
             echo "directory: $directory"
             echo "buildDir: $buildDir"
           
-            BUILD_DIR="$directory/$buildDir/.."
+            BUILD_DIR="$directory"
             if [ -d "$BUILD_DIR" ]; then
               echo "Found $BUILD_DIR" 
             else
