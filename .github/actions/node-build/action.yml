@@ -1,19 +1,21 @@
+name: "Upload Artifacts"
+description: "Upload Build Artifacts"
 inputs:
   packages:
     required: true
-
+    description: "Packages to include"
 
 runs:
   using: "composite"
-
   steps:
     - name: "Build Artifacts Directory"
-      using: 'node20'
-      main: 'dist/index.js'
+      shell: bash
+      run: node dist/index.js
+      env:
+        PACKAGES: ${{ inputs.packages }}
 
     - name: "Upload Artifacts"
       uses: actions/upload-artifact@v4
       with:
         name: 'artifacts'
         path: __artifacts__/*
-

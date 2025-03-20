@@ -4,11 +4,7 @@ import * as core from "@actions/core";
 import colors from "ansi-colors";
 
 async function run() {
-  const packagesString = core.getInput("packages", {
-    trimWhitespace: true,
-    required: true,
-  });
-  const packages = JSON.parse(packagesString);
+  const packages = JSON.parse(process.env.PACKAGES);
   // core.debug(packages);
   core.info(packages);
 
