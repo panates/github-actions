@@ -1,27 +1,46 @@
 {
+  "template": "#{{CHANGELOG}}\n## Contributors:\n- #{{CONTRIBUTORS}}",
+  "pr_template": "◉ #{{TITLE}}   (##{{NUMBER}})   by #{{AUTHOR_NAME}}  @#{{AUTHOR}}",
+  "commit_template": "◉ #{{TITLE}}   by #{{AUTHOR_NAME}}  @#{{AUTHOR}}",
+  "empty_template": "◉ no changes",
   "categories": [
     {
       "title": "## 🚀 Features",
-      "labels": ["feature"]
+      "labels": ["feat", "feature"]
     },
     {
-      "title": "## 🐛 Fixes",
-      "labels": ["fix"]
+      "title": "## 🪲 Fixes",
+      "labels": ["fix", "bug"]
+    },
+    {
+      "title": "## 🛠️ Updates",
+      "labels": ["refactor", "update", "perf", "style"]
     },
     {
       "title": "## 🧪 Tests",
+      "key": "tests",
       "labels": ["test"]
+    },
+    {
+      "title": "## 📖 Documentation",
+      "labels": ["doc"]
+    },
+    {
+      "title": "## 💬 Other",
+      "labels": ["ci", ""]
     }
   ],
   "ignore_labels": [
-    "chore",
-    "dev",
-    "ignore"
+    "ignore", "chore", "dev"
   ],
-  "sort": "ASC",
-  "template": "${{CHANGELOG}}",
-  "pr_template": "- ${{TITLE}}\n   - PR: #${{NUMBER}}",
-  "empty_template": "- no changes",
-  "max_pull_requests": 1000,
-  "max_back_track_time_days": 1000
+  "sort": {
+    "order": "ASC",
+    "on_property": "mergedAt"
+  },
+  "label_extractor": [
+    {
+      "pattern": "^(build|chore|ci|docs|feat|fix|perf|update|refactor|revert|style|test|ignore){1}(\\([\\w\\-\\.]+\\))?(!)?: ([\\w ])+([\\s\\S]*)",
+      "target": "$1"
+    }
+  ]
 }
