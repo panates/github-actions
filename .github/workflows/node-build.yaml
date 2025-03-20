@@ -6,9 +6,6 @@ on:
         type: string
         description: "Build script to be executed"
         default: 'npm run build'
-      branch:
-        type: string
-        default: 'dev'
     secrets:
       PERSONAL_ACCESS_TOKEN:
         description: "Github personal access token"
@@ -69,6 +66,6 @@ jobs:
       #
 
       - name: Parse Directories
-        uses: panates/github-actions/.github/actions/node-build@${{ inputs.branch }}
+        uses: panates/github-actions/.github/actions/node-build@dev
         with:
           packages: ${{ steps.environment.outputs.packages }}
