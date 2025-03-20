@@ -4,4 +4,4 @@ inputs:
 
 runs:
   using: 'node20'
-  main: 'index.mjs'
+  main: 'lib/index.js'
