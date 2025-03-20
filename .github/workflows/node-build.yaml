@@ -36,17 +36,6 @@ jobs:
 #        run: |
 #          ${{ inputs.build_script }}
 #
-
-      - name: "Debug Repository Info Outputs"
-        shell: bash
-        run: |
-          echo "Available Outputs: ${{ toJson(steps.environment.outputs) }}"    
-
-      - name: "Debug Output"
-        shell: bash
-        run: |
-          echo "Packages Output: ${{ steps.environment.outputs.packages }}"
-
       - name: Parse Directories in Bash
         shell: bash
         run: |
@@ -54,9 +43,9 @@ jobs:
            
           echo "Processing packages..."
           echo "$PACKAGES" | jq -c '.[]' | while IFS= read -r package; do
-            name=$(echo "package" | jq -r '.name')
+            name=$(echo "$package" | jq -r '.name')
             version=$(echo "$package" | jq -r '.version')
-           
+          
             echo "Package Name: $name"
             echo "Package Version: $version"
           done
