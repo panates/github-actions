@@ -10,7 +10,7 @@ runs:
   steps:
     - name: "Build Artifacts Directory"
       shell: bash
-      run: node dist/index.js
+      run: node ${{ github.action_path }}/dist/index.js
       env:
         PACKAGES: ${{ inputs.packages }}
 
