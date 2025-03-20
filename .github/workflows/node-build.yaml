@@ -97,35 +97,38 @@ jobs:
         run: |
           cat COMMIT_CHANGELOG.md
 
-#      - name: "Build"
+      #      - name: "Build"
+      #        shell: bash
+      #        run: |
+      #          ${{ inputs.build_script }}
+      #
+
+      - name: Parse Directories
+        uses: ./.github/actions/node-build
+        with:
+          packages: ${{ steps.environment.outputs.packages }}
 #        shell: bash
 #        run: |
-#          ${{ inputs.build_script }}
+#          PACKAGES='${{ steps.environment.outputs.packages }}'
 #
-
-      - name: Parse Directories in Bash
-        shell: bash
-        run: |
-          PACKAGES='${{ steps.environment.outputs.packages }}'
-          
-          echo "Processing packages..."
-          echo "$PACKAGES" | jq -c '.[]' | while IFS= read -r package; do
-            name=$(echo "$package" | jq -r '.name')
-            version=$(echo "$package" | jq -r '.version')
-            directory=$(echo "$package" | jq -r '.directory')
-            buildDir=$(echo "$package" | jq -r '.buildDir')
-          
-            echo "Package Name: $name"
-            echo "Package Version: $version"
-            echo "directory: $directory"
-            echo "buildDir: $buildDir"
-          
-            BUILD_DIR="$directory"
-            if [ -d "$BUILD_DIR" ]; then
-              echo "Found $BUILD_DIR" 
-            else
-              echo "Not Found $BUILD_DIR"
-              continue
-            fi         
-          
-          done
+#          echo "Processing packages..."
+#          echo "$PACKAGES" | jq -c '.[]' | while IFS= read -r package; do
+#            name=$(echo "$package" | jq -r '.name')
+#            version=$(echo "$package" | jq -r '.version')
+#            directory=$(echo "$package" | jq -r '.directory')
+#            buildDir=$(echo "$package" | jq -r '.buildDir')
+#
+#            echo "Package Name: $name"
+#            echo "Package Version: $version"
+#            echo "directory: $directory"
+#            echo "buildDir: $buildDir"
+#
+#            BUILD_DIR="$directory"
+#            if [ -d "$BUILD_DIR" ]; then
+#              echo "Found $BUILD_DIR"
+#            else
+#              echo "Not Found $BUILD_DIR"
+#              continue
+#            fi
+#
+#          done
