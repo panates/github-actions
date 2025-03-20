@@ -31,6 +31,62 @@ jobs:
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
+
+      - name: "Build Changelog"
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          fromTag: ${{ steps.environment.outputs.prevSha }}
+          toTag: ${{ steps.environment.outputs.lastSha }}
+          outputFile: "COMMIT_CHANGELOG.md"
+          configurationJson: |
+            {
+              "template": "#{{CHANGELOG}}\n\n<details>\n<summary>Uncategorized</summary>\n\n#{{UNCATEGORIZED}}\n</details>",
+              "pr_template": "- #{{TITLE}}\n   - PR: ##{{NUMBER}}",
+              "empty_template": "- no changes",
+              "categories": [
+                {
+                    "title": "## 🚀 Features",
+                    "labels": ["feat", "feature"]
+                },
+                {
+                   "title": "## 🐛 Fixes",
+                    "labels": ["fix", "bug"]
+                },
+                {
+                    "title": "## 🧪 Tests",
+                    "key": "tests",
+                    "labels": ["test"]
+                },
+                {
+                    "title": "## Other",
+                    "labels": []
+                }
+              ],
+              "ignore_labels": [
+                  "ignore", "chore", "dev"
+              ],
+              "sort": {
+                  "order": "ASC",
+                  "on_property": "mergedAt"
+              },
+              "label_extractor": [
+                {
+                  "pattern": "^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|ignore){1}(\\([\\w\\-\\.]+\\))?(!)?: ([\\w ])+([\\s\\S]*)",
+                  "target": "$1"
+                }
+              ]
+            }
+
+      - name: "debug 1"
+        run: |
+          echo ${{ steps.changelog.outputs.changelog }}
+
+      - name: "debug 2"
+        run: |
+          cat COMMIT_CHANGELOG.md
+
 #      - name: "Build"
 #        shell: bash
 #        run: |
