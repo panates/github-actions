@@ -111,7 +111,7 @@ jobs:
 #          mkdir -p __publish/build
 #          mkdir -p __publish/packages
 #          mkdir -p __publish/releases
-          PACKAGES='${{ steps.environment.outputs.packages }}'
+          PACKAGES="${{ steps.environment.outputs.packages }}"
                      
           echo "$PACKAGES" | jq -c '.[]' | while IFS= read -r package; do
             name=$(echo "$package" | jq -r '.name')
