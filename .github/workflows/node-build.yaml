@@ -37,7 +37,7 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@v5
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          fromTag: ${{ steps.environment.outputs.prevSha }}
+          fromTag: ${{ steps.environment.outputs.lastSha }}
           toTag: ${{ steps.environment.outputs.lastSha }}
           mode: COMMIT
           outputFile: "COMMIT_CHANGELOG.md"
@@ -49,8 +49,12 @@ jobs:
                     "labels": ["feat", "feature"]
                 },
                 {
-                   "title": "## 🐛 Fixes",
+                   "title": "## 🪲 Fixes",
                     "labels": ["fix", "bug"]
+                },
+                {
+                    "title": "## 🛠️ Updates",
+                    "labels": ["refactor", "update", "perf", "style"]
                 },
                 {
                     "title": "## 🧪 Tests",
@@ -58,8 +62,12 @@ jobs:
                     "labels": ["test"]
                 },
                 {
-                    "title": "## Other",
-                    "labels": []
+                    "title": "## 📖 Documentation",
+                    "labels": ["doc"]
+                },
+                {
+                    "title": "## 💬 Other",
+                    "labels": ["ci", ""]
                 }
               ],
               "ignore_labels": [
@@ -71,7 +79,7 @@ jobs:
               },
               "label_extractor": [
                 {
-                  "pattern": "^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|ignore){1}(\\([\\w\\-\\.]+\\))?(!)?: ([\\w ])+([\\s\\S]*)",
+                  "pattern": "^(build|chore|ci|docs|feat|fix|perf|update|refactor|revert|style|test|ignore){1}(\\([\\w\\-\\.]+\\))?(!)?: ([\\w ])+([\\s\\S]*)",
                   "target": "$1"
                 }
               ]
