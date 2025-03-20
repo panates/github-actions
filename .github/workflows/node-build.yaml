@@ -37,15 +37,15 @@ jobs:
 #          ${{ inputs.build_script }}
 #
 
-      - name: Debug Repository Info Outputs
-        run: |
-          echo "Available Outputs: ${{ toJson(steps.environment.outputs) }}"
+      - name: "Debug Repository Info Outputs"
         shell: bash
+        run: |
+          echo "Available Outputs: ${{ toJson(steps.environment.outputs) }}"    
 
-      - name: Debug Output
+      - name: "Debug Output"
+        shell: bash
         run:
           echo "Packages Output: ${{ steps.environment.outputs.packages }}"
-        shell: bash
 
       - name: Parse Directories in Bash
         shell: bash
