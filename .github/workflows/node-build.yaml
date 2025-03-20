@@ -104,7 +104,7 @@ jobs:
       #
 
       - name: Parse Directories
-        uses: ./.github/actions/node-build
+        uses: panates/github-actions/.github/actions/node-build@dev
         with:
           packages: ${{ steps.environment.outputs.packages }}
 #        shell: bash
