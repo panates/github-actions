@@ -40,13 +40,13 @@ jobs:
       - name: Parse Directories in Bash
         shell: bash
         run: |
-          PROJECTS='${{ needs.environment.outputs.projects }}'
+          PACKAGES='${{ needs.environment.outputs.packages }}'
            
-          echo "Processing projects..."
-          echo "$PROJECTS" | jq -c '.[]' | while IFS= read -r project; do
-            name=$(echo "$project" | jq -r '.name')
-            version=$(echo "$project" | jq -r '.version')
+          echo "Processing packages..."
+          echo "$PACKAGES" | jq -c '.[]' | while IFS= read -r package; do
+            name=$(echo "package" | jq -r '.name')
+            version=$(echo "$package" | jq -r '.version')
            
-            echo "Project Name: $name"
-            echo "Project Version: $version"
+            echo "Package Name: $name"
+            echo "Package Version: $version"
           done
