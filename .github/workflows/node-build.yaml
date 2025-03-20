@@ -44,7 +44,7 @@ jobs:
 
       - name: "Debug Output"
         shell: bash
-        run:
+        run: |
           echo "Packages Output: ${{ steps.environment.outputs.packages }}"
 
       - name: Parse Directories in Bash
