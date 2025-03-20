@@ -25,6 +25,14 @@ jobs:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           fetch-depth: 0
 
+      - name: Set Branch Name
+        id: branch
+        run: echo "BRANCH_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+
+      - name: Use Branch Name
+        run: |
+          echo "This workflow is running on branch: $BRANCH_NAME"
+
       - name: "Scan Environment"
         id: environment
         uses: panates/gh-repository-info@v1
@@ -41,53 +49,7 @@ jobs:
           toTag: ${{ steps.environment.outputs.lastSha }}
           mode: COMMIT
           outputFile: "COMMIT_CHANGELOG.md"
-          configurationJson: |
-            {
-              "template": "#{{CHANGELOG}}\n## Contributors:\n- #{{CONTRIBUTORS}}",
-              "pr_template": "◉ #{{TITLE}}   (##{{NUMBER}})   by #{{AUTHOR_NAME}}  @#{{AUTHOR}}",
-              "commit_template": "◉ #{{TITLE}}   by #{{AUTHOR_NAME}}  @#{{AUTHOR}}",
-              "empty_template": "◉ no changes",
-              "categories": [
-                {
-                    "title": "## 🚀 Features",
-                    "labels": ["feat", "feature"]
-                },
-                {
-                   "title": "## 🪲 Fixes",
-                    "labels": ["fix", "bug"]
-                },
-                {
-                    "title": "## 🛠️ Updates",
-                    "labels": ["refactor", "update", "perf", "style"]
-                },
-                {
-                    "title": "## 🧪 Tests",
-                    "key": "tests",
-                    "labels": ["test"]
-                },
-                {
-                    "title": "## 📖 Documentation",
-                    "labels": ["doc"]
-                },
-                {
-                    "title": "## 💬 Other",
-                    "labels": ["ci", ""]
-                }
-              ],
-              "ignore_labels": [
-                  "ignore", "chore", "dev"
-              ],
-              "sort": {
-                  "order": "ASC",
-                  "on_property": "mergedAt"
-              },
-              "label_extractor": [
-                {
-                  "pattern": "^(build|chore|ci|docs|feat|fix|perf|update|refactor|revert|style|test|ignore){1}(\\([\\w\\-\\.]+\\))?(!)?: ([\\w ])+([\\s\\S]*)",
-                  "target": "$1"
-                }
-              ]
-            }
+          configuration: 'changelog-config.json'
 
       - name: "debug 1"
         run: |
@@ -104,31 +66,6 @@ jobs:
       #
 
       - name: Parse Directories
-        uses: panates/github-actions/.github/actions/node-build@dev
+        uses: panates/github-actions/.github/actions/node-build@${{ github.ref_name }}
         with:
           packages: ${{ steps.environment.outputs.packages }}
-#        shell: bash
-#        run: |
-#          PACKAGES='${{ steps.environment.outputs.packages }}'
-#
-#          echo "Processing packages..."
-#          echo "$PACKAGES" | jq -c '.[]' | while IFS= read -r package; do
-#            name=$(echo "$package" | jq -r '.name')
-#            version=$(echo "$package" | jq -r '.version')
-#            directory=$(echo "$package" | jq -r '.directory')
-#            buildDir=$(echo "$package" | jq -r '.buildDir')
-#
-#            echo "Package Name: $name"
-#            echo "Package Version: $version"
-#            echo "directory: $directory"
-#            echo "buildDir: $buildDir"
-#
-#            BUILD_DIR="$directory"
-#            if [ -d "$BUILD_DIR" ]; then
-#              echo "Found $BUILD_DIR"
-#            else
-#              echo "Not Found $BUILD_DIR"
-#              continue
-#            fi
-#
-#          done
