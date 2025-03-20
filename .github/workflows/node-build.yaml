@@ -23,7 +23,7 @@ jobs:
         uses: panates/gh-setup-node@v1
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          fetch-depth: 0
+#          fetch-depth: 0
 
       - name: "Scan Environment"
         id: environment
@@ -40,8 +40,7 @@ jobs:
       - name: Parse Directories in Bash
         shell: bash
         run: |
-          PACKAGES='${{ needs.environment.outputs.packages }}'
-          echo $PACKAGES
+          PACKAGES='${{ steps.environment.outputs.packages }}'
            
           echo "Processing packages..."
           echo "$PACKAGES" | jq -c '.[]' | while IFS= read -r package; do
