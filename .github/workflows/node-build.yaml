@@ -112,7 +112,11 @@ jobs:
           echo "$PACKAGES" | jq -c '.[]' | while IFS= read -r package; do
             name=$(echo "$package" | jq -r '.name')
             version=$(echo "$package" | jq -r '.version')
+            directory=$(echo "$package" | jq -r '.directory')
+            buildDir=$(echo "$package" | jq -r '.buildDir')
           
             echo "Package Name: $name"
             echo "Package Version: $version"
+            echo "directory: $directory"
+            echo "buildDir: $buildDir"
           done
