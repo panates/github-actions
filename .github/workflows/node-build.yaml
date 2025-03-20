@@ -66,6 +66,6 @@ jobs:
       #
 
       - name: Parse Directories
-        uses: panates/github-actions/.github/actions/node-build@${{ github.ref_name }}
+        uses: panates/github-actions/.github/actions/node-build
         with:
           packages: ${{ steps.environment.outputs.packages }}
