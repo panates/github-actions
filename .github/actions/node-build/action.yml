@@ -2,6 +2,18 @@ inputs:
   packages:
     required: true
 
+
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: "composite"
+
+  steps:
+    - name: "Build Artifacts Directory"
+      using: 'node20'
+      main: 'dist/index.js'
+
+    - name: "Upload Artifacts"
+      uses: actions/upload-artifact@v4
+      with:
+        name: 'artifacts'
+        path: __artifacts__/*
+

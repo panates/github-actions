@@ -17580,12 +17580,12 @@ var require_lib = __commonJS({
             throw new Error("Client has already been disposed.");
           }
           const parsedUrl = new URL(requestUrl);
-          let info = this._prepareRequest(verb, parsedUrl, headers);
+          let info2 = this._prepareRequest(verb, parsedUrl, headers);
           const maxTries = this._allowRetries && RetryableHttpVerbs.includes(verb) ? this._maxRetries + 1 : 1;
           let numTries = 0;
           let response;
           do {
-            response = yield this.requestRaw(info, data);
+            response = yield this.requestRaw(info2, data);
             if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
               let authenticationHandler;
               for (const handler of this.handlers) {
@@ -17595,7 +17595,7 @@ var require_lib = __commonJS({
                 }
               }
               if (authenticationHandler) {
-                return authenticationHandler.handleAuthentication(this, info, data);
+                return authenticationHandler.handleAuthentication(this, info2, data);
               } else {
                 return response;
               }
@@ -17618,8 +17618,8 @@ var require_lib = __commonJS({
                   }
                 }
               }
-              info = this._prepareRequest(verb, parsedRedirectUrl, headers);
-              response = yield this.requestRaw(info, data);
+              info2 = this._prepareRequest(verb, parsedRedirectUrl, headers);
+              response = yield this.requestRaw(info2, data);
               redirectsRemaining--;
             }
             if (!response.message.statusCode || !HttpResponseRetryCodes.includes(response.message.statusCode)) {
@@ -17648,7 +17648,7 @@ var require_lib = __commonJS({
        * @param info
        * @param data
        */
-      requestRaw(info, data) {
+      requestRaw(info2, data) {
         return __awaiter(this, void 0, void 0, function* () {
           return new Promise((resolve, reject) => {
             function callbackForResult(err, res) {
@@ -17660,7 +17660,7 @@ var require_lib = __commonJS({
                 resolve(res);
               }
             }
-            this.requestRawWithCallback(info, data, callbackForResult);
+            this.requestRawWithCallback(info2, data, callbackForResult);
           });
         });
       }
@@ -17670,12 +17670,12 @@ var require_lib = __commonJS({
        * @param data
        * @param onResult
        */
-      requestRawWithCallback(info, data, onResult) {
+      requestRawWithCallback(info2, data, onResult) {
         if (typeof data === "string") {
-          if (!info.options.headers) {
-            info.options.headers = {};
+          if (!info2.options.headers) {
+            info2.options.headers = {};
           }
-          info.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
+          info2.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
         }
         let callbackCalled = false;
         function handleResult(err, res) {
@@ -17684,7 +17684,7 @@ var require_lib = __commonJS({
             onResult(err, res);
           }
         }
-        const req = info.httpModule.request(info.options, (msg) => {
+        const req = info2.httpModule.request(info2.options, (msg) => {
           const res = new HttpClientResponse(msg);
           handleResult(void 0, res);
         });
@@ -17696,7 +17696,7 @@ var require_lib = __commonJS({
           if (socket) {
             socket.end();
           }
-          handleResult(new Error(`Request timeout: ${info.options.path}`));
+          handleResult(new Error(`Request timeout: ${info2.options.path}`));
         });
         req.on("error", function(err) {
           handleResult(err);
@@ -17732,27 +17732,27 @@ var require_lib = __commonJS({
         return this._getProxyAgentDispatcher(parsedUrl, proxyUrl);
       }
       _prepareRequest(method, requestUrl, headers) {
-        const info = {};
-        info.parsedUrl = requestUrl;
-        const usingSsl = info.parsedUrl.protocol === "https:";
-        info.httpModule = usingSsl ? https : http;
+        const info2 = {};
+        info2.parsedUrl = requestUrl;
+        const usingSsl = info2.parsedUrl.protocol === "https:";
+        info2.httpModule = usingSsl ? https : http;
         const defaultPort = usingSsl ? 443 : 80;
-        info.options = {};
-        info.options.host = info.parsedUrl.hostname;
-        info.options.port = info.parsedUrl.port ? parseInt(info.parsedUrl.port) : defaultPort;
-        info.options.path = (info.parsedUrl.pathname || "") + (info.parsedUrl.search || "");
-        info.options.method = method;
-        info.options.headers = this._mergeHeaders(headers);
+        info2.options = {};
+        info2.options.host = info2.parsedUrl.hostname;
+        info2.options.port = info2.parsedUrl.port ? parseInt(info2.parsedUrl.port) : defaultPort;
+        info2.options.path = (info2.parsedUrl.pathname || "") + (info2.parsedUrl.search || "");
+        info2.options.method = method;
+        info2.options.headers = this._mergeHeaders(headers);
         if (this.userAgent != null) {
-          info.options.headers["user-agent"] = this.userAgent;
+          info2.options.headers["user-agent"] = this.userAgent;
         }
-        info.options.agent = this._getAgent(info.parsedUrl);
+        info2.options.agent = this._getAgent(info2.parsedUrl);
         if (this.handlers) {
           for (const handler of this.handlers) {
-            handler.prepareRequest(info.options);
+            handler.prepareRequest(info2.options);
           }
         }
-        return info;
+        return info2;
       }
       _mergeHeaders(headers) {
         if (this.requestOptions && this.requestOptions.headers) {
@@ -19734,34 +19734,34 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     exports2.error = error;
-    function warning(message, properties = {}) {
+    function warning2(message, properties = {}) {
       (0, command_1.issueCommand)("warning", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
-    exports2.warning = warning;
+    exports2.warning = warning2;
     function notice(message, properties = {}) {
       (0, command_1.issueCommand)("notice", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     exports2.notice = notice;
-    function info(message) {
+    function info2(message) {
       process.stdout.write(message + os.EOL);
     }
-    exports2.info = info;
-    function startGroup(name) {
+    exports2.info = info2;
+    function startGroup2(name) {
       (0, command_1.issue)("group", name);
     }
-    exports2.startGroup = startGroup;
-    function endGroup() {
+    exports2.startGroup = startGroup2;
+    function endGroup2() {
       (0, command_1.issue)("endgroup");
     }
-    exports2.endGroup = endGroup;
+    exports2.endGroup = endGroup2;
     function group(name, fn) {
       return __awaiter(this, void 0, void 0, function* () {
-        startGroup(name);
+        startGroup2(name);
         let result;
         try {
           result = yield fn();
         } finally {
-          endGroup();
+          endGroup2();
         }
         return result;
       });
@@ -19807,25 +19807,277 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
   }
 });
 
+// node_modules/ansi-colors/symbols.js
+var require_symbols6 = __commonJS({
+  "node_modules/ansi-colors/symbols.js"(exports2, module2) {
+    "use strict";
+    var isHyper = typeof process !== "undefined" && process.env.TERM_PROGRAM === "Hyper";
+    var isWindows = typeof process !== "undefined" && process.platform === "win32";
+    var isLinux = typeof process !== "undefined" && process.platform === "linux";
+    var common = {
+      ballotDisabled: "\u2612",
+      ballotOff: "\u2610",
+      ballotOn: "\u2611",
+      bullet: "\u2022",
+      bulletWhite: "\u25E6",
+      fullBlock: "\u2588",
+      heart: "\u2764",
+      identicalTo: "\u2261",
+      line: "\u2500",
+      mark: "\u203B",
+      middot: "\xB7",
+      minus: "\uFF0D",
+      multiplication: "\xD7",
+      obelus: "\xF7",
+      pencilDownRight: "\u270E",
+      pencilRight: "\u270F",
+      pencilUpRight: "\u2710",
+      percent: "%",
+      pilcrow2: "\u2761",
+      pilcrow: "\xB6",
+      plusMinus: "\xB1",
+      question: "?",
+      section: "\xA7",
+      starsOff: "\u2606",
+      starsOn: "\u2605",
+      upDownArrow: "\u2195"
+    };
+    var windows = Object.assign({}, common, {
+      check: "\u221A",
+      cross: "\xD7",
+      ellipsisLarge: "...",
+      ellipsis: "...",
+      info: "i",
+      questionSmall: "?",
+      pointer: ">",
+      pointerSmall: "\xBB",
+      radioOff: "( )",
+      radioOn: "(*)",
+      warning: "\u203C"
+    });
+    var other = Object.assign({}, common, {
+      ballotCross: "\u2718",
+      check: "\u2714",
+      cross: "\u2716",
+      ellipsisLarge: "\u22EF",
+      ellipsis: "\u2026",
+      info: "\u2139",
+      questionFull: "\uFF1F",
+      questionSmall: "\uFE56",
+      pointer: isLinux ? "\u25B8" : "\u276F",
+      pointerSmall: isLinux ? "\u2023" : "\u203A",
+      radioOff: "\u25EF",
+      radioOn: "\u25C9",
+      warning: "\u26A0"
+    });
+    module2.exports = isWindows && !isHyper ? windows : other;
+    Reflect.defineProperty(module2.exports, "common", { enumerable: false, value: common });
+    Reflect.defineProperty(module2.exports, "windows", { enumerable: false, value: windows });
+    Reflect.defineProperty(module2.exports, "other", { enumerable: false, value: other });
+  }
+});
+
+// node_modules/ansi-colors/index.js
+var require_ansi_colors = __commonJS({
+  "node_modules/ansi-colors/index.js"(exports2, module2) {
+    "use strict";
+    var isObject = (val) => val !== null && typeof val === "object" && !Array.isArray(val);
+    var ANSI_REGEX = /[\u001b\u009b][[\]#;?()]*(?:(?:(?:[^\W_]*;?[^\W_]*)\u0007)|(?:(?:[0-9]{1,4}(;[0-9]{0,4})*)?[~0-9=<>cf-nqrtyA-PRZ]))/g;
+    var hasColor = () => {
+      if (typeof process !== "undefined") {
+        return process.env.FORCE_COLOR !== "0";
+      }
+      return false;
+    };
+    var create = () => {
+      const colors2 = {
+        enabled: hasColor(),
+        visible: true,
+        styles: {},
+        keys: {}
+      };
+      const ansi = (style2) => {
+        let open = style2.open = `\x1B[${style2.codes[0]}m`;
+        let close = style2.close = `\x1B[${style2.codes[1]}m`;
+        let regex = style2.regex = new RegExp(`\\u001b\\[${style2.codes[1]}m`, "g");
+        style2.wrap = (input, newline) => {
+          if (input.includes(close)) input = input.replace(regex, close + open);
+          let output = open + input + close;
+          return newline ? output.replace(/\r*\n/g, `${close}$&${open}`) : output;
+        };
+        return style2;
+      };
+      const wrap = (style2, input, newline) => {
+        return typeof style2 === "function" ? style2(input) : style2.wrap(input, newline);
+      };
+      const style = (input, stack) => {
+        if (input === "" || input == null) return "";
+        if (colors2.enabled === false) return input;
+        if (colors2.visible === false) return "";
+        let str = "" + input;
+        let nl = str.includes("\n");
+        let n = stack.length;
+        if (n > 0 && stack.includes("unstyle")) {
+          stack = [.../* @__PURE__ */ new Set(["unstyle", ...stack])].reverse();
+        }
+        while (n-- > 0) str = wrap(colors2.styles[stack[n]], str, nl);
+        return str;
+      };
+      const define = (name, codes, type) => {
+        colors2.styles[name] = ansi({ name, codes });
+        let keys = colors2.keys[type] || (colors2.keys[type] = []);
+        keys.push(name);
+        Reflect.defineProperty(colors2, name, {
+          configurable: true,
+          enumerable: true,
+          set(value) {
+            colors2.alias(name, value);
+          },
+          get() {
+            let color = (input) => style(input, color.stack);
+            Reflect.setPrototypeOf(color, colors2);
+            color.stack = this.stack ? this.stack.concat(name) : [name];
+            return color;
+          }
+        });
+      };
+      define("reset", [0, 0], "modifier");
+      define("bold", [1, 22], "modifier");
+      define("dim", [2, 22], "modifier");
+      define("italic", [3, 23], "modifier");
+      define("underline", [4, 24], "modifier");
+      define("inverse", [7, 27], "modifier");
+      define("hidden", [8, 28], "modifier");
+      define("strikethrough", [9, 29], "modifier");
+      define("black", [30, 39], "color");
+      define("red", [31, 39], "color");
+      define("green", [32, 39], "color");
+      define("yellow", [33, 39], "color");
+      define("blue", [34, 39], "color");
+      define("magenta", [35, 39], "color");
+      define("cyan", [36, 39], "color");
+      define("white", [37, 39], "color");
+      define("gray", [90, 39], "color");
+      define("grey", [90, 39], "color");
+      define("bgBlack", [40, 49], "bg");
+      define("bgRed", [41, 49], "bg");
+      define("bgGreen", [42, 49], "bg");
+      define("bgYellow", [43, 49], "bg");
+      define("bgBlue", [44, 49], "bg");
+      define("bgMagenta", [45, 49], "bg");
+      define("bgCyan", [46, 49], "bg");
+      define("bgWhite", [47, 49], "bg");
+      define("blackBright", [90, 39], "bright");
+      define("redBright", [91, 39], "bright");
+      define("greenBright", [92, 39], "bright");
+      define("yellowBright", [93, 39], "bright");
+      define("blueBright", [94, 39], "bright");
+      define("magentaBright", [95, 39], "bright");
+      define("cyanBright", [96, 39], "bright");
+      define("whiteBright", [97, 39], "bright");
+      define("bgBlackBright", [100, 49], "bgBright");
+      define("bgRedBright", [101, 49], "bgBright");
+      define("bgGreenBright", [102, 49], "bgBright");
+      define("bgYellowBright", [103, 49], "bgBright");
+      define("bgBlueBright", [104, 49], "bgBright");
+      define("bgMagentaBright", [105, 49], "bgBright");
+      define("bgCyanBright", [106, 49], "bgBright");
+      define("bgWhiteBright", [107, 49], "bgBright");
+      colors2.ansiRegex = ANSI_REGEX;
+      colors2.hasColor = colors2.hasAnsi = (str) => {
+        colors2.ansiRegex.lastIndex = 0;
+        return typeof str === "string" && str !== "" && colors2.ansiRegex.test(str);
+      };
+      colors2.alias = (name, color) => {
+        let fn = typeof color === "string" ? colors2[color] : color;
+        if (typeof fn !== "function") {
+          throw new TypeError("Expected alias to be the name of an existing color (string) or a function");
+        }
+        if (!fn.stack) {
+          Reflect.defineProperty(fn, "name", { value: name });
+          colors2.styles[name] = fn;
+          fn.stack = [name];
+        }
+        Reflect.defineProperty(colors2, name, {
+          configurable: true,
+          enumerable: true,
+          set(value) {
+            colors2.alias(name, value);
+          },
+          get() {
+            let color2 = (input) => style(input, color2.stack);
+            Reflect.setPrototypeOf(color2, colors2);
+            color2.stack = this.stack ? this.stack.concat(fn.stack) : fn.stack;
+            return color2;
+          }
+        });
+      };
+      colors2.theme = (custom) => {
+        if (!isObject(custom)) throw new TypeError("Expected theme to be an object");
+        for (let name of Object.keys(custom)) {
+          colors2.alias(name, custom[name]);
+        }
+        return colors2;
+      };
+      colors2.alias("unstyle", (str) => {
+        if (typeof str === "string" && str !== "") {
+          colors2.ansiRegex.lastIndex = 0;
+          return str.replace(colors2.ansiRegex, "");
+        }
+        return "";
+      });
+      colors2.alias("noop", (str) => str);
+      colors2.none = colors2.clear = colors2.noop;
+      colors2.stripColor = colors2.unstyle;
+      colors2.symbols = require_symbols6();
+      colors2.define = define;
+      return colors2;
+    };
+    module2.exports = create();
+    module2.exports.create = create;
+  }
+});
+
 // .github/actions/node-build/src/index.mjs
 var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
 var core = __toESM(require_core(), 1);
+var import_ansi_colors = __toESM(require_ansi_colors(), 1);
 async function run() {
   const packagesString = core.getInput("packages", {
     trimWhitespace: true,
     required: true
   });
   const packages = JSON.parse(packagesString);
+  core.info(packages);
+  core.startGroup("Preparing directories");
+  const rootDir = process.env.GITHUB_WORKSPACE;
+  const artifactsDir = import_node_path.default.join(rootDir, "__artifacts__");
+  import_node_fs.default.mkdirSync(artifactsDir, { recursive: true });
+  import_node_fs.default.cpSync(
+    import_node_path.default.join(rootDir, "COMMIT_CHANGELOG.md"),
+    import_node_path.default.join(artifactsDir, "COMMIT_CHANGELOG.md")
+  );
   for (const pkg of packages) {
-    const packageDir = import_node_path.default.join(process.env.GITHUB_WORKSPACE, pkg.directory);
-    const buildDir = import_node_path.default.join(packageDir, pkg.buildDir);
-    console.log("buildDir: ", buildDir);
+    core.info("Preparing", import_ansi_colors.default.magenta(`${pkg.name}`));
+    const packageDir = import_node_path.default.join(rootDir, pkg.directory);
+    pkg.buildDir = "src";
+    const buildDir = import_node_path.default.join(packageDir, pkg.buildDir || "./");
     if (import_node_fs.default.existsSync(buildDir)) {
-      console.log("buildDir exists");
-    } else console.log("buildDir do not exists");
+      core.warning("build directory do not exists. Skipping");
+      continue;
+    }
+    const pkgFilename = sanitizeFilename(pkg.name);
+    import_node_fs.default.writeFileSync(
+      import_node_path.default.join(artifactsDir, pkgFilename + "json"),
+      JSON.stringify(pkg, null, 2)
+    );
+    import_node_fs.default.cpSync(buildDir, artifactsDir, { recursive: true });
   }
-  console.log(packages);
+  core.endGroup();
+}
+function sanitizeFilename(filename, replacement = "_") {
+  return filename.replace(/[<>:"/\\|?*\x00-\x1F]/g, replacement).trim();
 }
 run().catch((error) => {
   core.setFailed(error);
