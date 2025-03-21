@@ -15,7 +15,7 @@ async function run() {
 
   const infoFile = [];
   for (const pkg of packages) {
-    core.debug("Preparing", colors.magenta(`${pkg.name}`));
+    core.info("Preparing", colors.magenta(`${pkg.name}`));
     const packageDir = path.join(rootDir, pkg.directory);
     const buildDir = path.join(packageDir, pkg.buildDir || "./");
     if (!fs.existsSync(buildDir)) {
@@ -30,17 +30,17 @@ async function run() {
     });
 
     /** Copy build files to artifacts dir */
-    core.debug("Copying build files to artifacts dir");
+    core.info(`Copying build files from ${pkgDir}`);
     fs.cpSync(buildDir, path.join(artifactsDir, pkgDir), { recursive: true });
   }
   /** Write package info to json file same basename with zip file */
-  core.debug("Writing packages info to json file");
+  core.info("Writing projects.json file");
   fs.writeFileSync(
     path.join(artifactsDir, "projects.json"),
     JSON.stringify(infoFile, null, 2),
   );
   /** Copy COMMIT_CHANGELOG.md to artifacts dir */
-  core.debug("Copying COMMIT_CHANGELOG.md to artifacts dir");
+  core.debug("Copying COMMIT_CHANGELOG.md");
   fs.cpSync(
     path.join(rootDir, "COMMIT_CHANGELOG.md"),
     path.join(artifactsDir, "COMMIT_CHANGELOG.md"),
