@@ -7,8 +7,6 @@ import colors from "ansi-colors";
 async function run() {
   const personelAccessToken = core.getInput("token", { required: true });
 
-  core.startGroup("Publishing npm packages");
-
   const rootDir = process.env.GITHUB_WORKSPACE;
   const artifactsDir = path.join(rootDir, "__artifacts__");
   if (!fs.existsSync(artifactsDir)) {
@@ -49,7 +47,7 @@ async function run() {
         },
       );
       core.info(
-        `Package ${colors.magenta(pkg.name)}@${colors.magenta(pkg.version)} already exists in npm repository. Skipping.`,
+        `Package ${colors.magenta(pkg.name + "@" + pkg.version)} already exists in npm repository. Skipping.`,
       );
       continue;
     } catch (error) {
@@ -62,9 +60,7 @@ async function run() {
     }
 
     /** Publish package */
-    core.info(
-      `Publishing ${colors.magenta(pkg.name)}@${colors.magenta(pkg.version)}`,
-    );
+    core.info(`Publishing ${colors.magenta(pkg.name + "@" + pkg.version)}`);
     try {
       execSync("npm publish", {
         cwd: pkgDir,
@@ -75,7 +71,6 @@ async function run() {
       return;
     }
   }
-  core.endGroup();
 }
 
 run().catch((error) => {

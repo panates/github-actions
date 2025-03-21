@@ -19746,22 +19746,22 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       process.stdout.write(message + os.EOL);
     }
     exports2.info = info2;
-    function startGroup2(name) {
+    function startGroup(name) {
       (0, command_1.issue)("group", name);
     }
-    exports2.startGroup = startGroup2;
-    function endGroup2() {
+    exports2.startGroup = startGroup;
+    function endGroup() {
       (0, command_1.issue)("endgroup");
     }
-    exports2.endGroup = endGroup2;
+    exports2.endGroup = endGroup;
     function group(name, fn) {
       return __awaiter(this, void 0, void 0, function* () {
-        startGroup2(name);
+        startGroup(name);
         let result;
         try {
           result = yield fn();
         } finally {
-          endGroup2();
+          endGroup();
         }
         return result;
       });
@@ -20046,7 +20046,6 @@ var core = __toESM(require_core(), 1);
 var import_ansi_colors = __toESM(require_ansi_colors(), 1);
 async function run() {
   const personelAccessToken = core.getInput("token", { required: true });
-  core.startGroup("Publishing npm packages");
   const rootDir = process.env.GITHUB_WORKSPACE;
   const artifactsDir = import_node_path.default.join(rootDir, "__artifacts__");
   if (!import_node_fs.default.existsSync(artifactsDir)) {
@@ -20080,7 +20079,7 @@ async function run() {
         }
       );
       core.info(
-        `Package ${import_ansi_colors.default.magenta(pkg.name)}@${import_ansi_colors.default.magenta(pkg.version)} already exists in npm repository. Skipping.`
+        `Package ${import_ansi_colors.default.magenta(pkg.name + "@" + pkg.version)} already exists in npm repository. Skipping.`
       );
       continue;
     } catch (error) {
@@ -20091,9 +20090,7 @@ async function run() {
         return;
       }
     }
-    core.info(
-      `Publishing ${import_ansi_colors.default.magenta(pkg.name)}@${import_ansi_colors.default.magenta(pkg.version)}`
-    );
+    core.info(`Publishing ${import_ansi_colors.default.magenta(pkg.name + "@" + pkg.version)}`);
     try {
       (0, import_node_child_process.execSync)("npm publish", {
         cwd: pkgDir,
@@ -20104,7 +20101,6 @@ async function run() {
       return;
     }
   }
-  core.endGroup();
 }
 run().catch((error) => {
   core.setFailed(error);
