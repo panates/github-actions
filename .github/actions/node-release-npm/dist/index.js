@@ -24131,6 +24131,15 @@ async function run() {
   console.log(projects);
   for (const pkg of projects) {
     if (!pkg.isNpmPackage) continue;
+    const npmrcContent = `
+@${github.context.repo.owner}:registry=https://npm.pkg.github.com/:_authToken=${personelAccessToken}
+`;
+    console.log("**** .npmrc content:\n\n", npmrcContent, "\n***********\n");
+    import_node_fs.default.appendFileSync(
+      import_node_path.default.join(artifactsDir, pkg.directory, ".npmrc"),
+      npmrcContent,
+      "utf-8"
+    );
     if (await fetchVersionFromNpm(pkg.name + "@" + pkg.version)) {
       core.info(
         `Package ${import_ansi_colors.default.magenta(pkg.name)}@${import_ansi_colors.default.magenta(
@@ -24139,18 +24148,11 @@ async function run() {
       );
       continue;
     }
+    if (process.exitCode) return;
     core.info(
       `Publishing ${import_ansi_colors.default.magenta(pkg.name)}@${import_ansi_colors.default.magenta(pkg.version)}`
     );
     try {
-      const npmrcContent = `
-@${github.context.repo.owner}:registry=https://npm.pkg.github.com/:_authToken=${personelAccessToken}
-`;
-      import_node_fs.default.appendFileSync(
-        import_node_path.default.join(artifactsDir, pkg.directory, ".npmrc"),
-        npmrcContent,
-        "utf-8"
-      );
       (0, import_node_child_process.execSync)("npm publish", {
         cwd: import_node_path.default.join(artifactsDir, pkg.directory),
         stdio: "inherit"
@@ -24166,7 +24168,9 @@ async function fetchVersionFromNpm(packageName) {
   try {
     return (0, import_node_child_process.execSync)('npm show "' + packageName + '" version').toString().trim();
   } catch (error) {
-    console.error("Error fetching version from npm repository:", error);
+    core.setFailed(
+      "Error fetching version from npm repository:" + error.message
+    );
   }
 }
 run().catch((error) => {
