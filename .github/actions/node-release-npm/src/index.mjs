@@ -38,7 +38,10 @@ async function run() {
 
     /** Check if package exists in repository */
     if (
-      await npmExists(pkg.name, pkg.version, pkgJson.publishConfig?.registry)
+      await npmExists(pkg.name, {
+        version: pkg.version,
+        registry: pkgJson.publishConfig?.registry,
+      })
     ) {
       core.info(
         `Package ${colors.magenta(
