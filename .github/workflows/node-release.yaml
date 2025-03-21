@@ -46,7 +46,7 @@ jobs:
       - build
     steps:
       - name: Create Release
-        uses: kimvar-inc/manifests/.github/workflows/__github-release@dev
+        uses: kimvar-inc/manifests/.github/workflows/__github-release.yaml@dev
         with:
           PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 #
