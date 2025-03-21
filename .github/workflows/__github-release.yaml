@@ -34,10 +34,33 @@ jobs:
       - name: "Loop over projects.json and create ZIP files"
         run: |
           mkdir -p __release
+          
+          # Check if `projects.json` File Exists
+          if [ ! -f "__artifacts/projects.json" ]; then
+            echo "Error: __artifacts/projects.json does not exist"
+            exit 1
+          fi
+          
+          # Check if the JSON File is Valid
+          jq . __artifacts/projects.json
+          
+          # Check if projects.json` is an empty JSON file
+          if [ "$(jq length __artifacts/projects.json)" -eq 0 ]; then
+            echo "Error: __artifacts/projects.json is empty or does not contain an array"
+            exit 1
+          fi
+          
+          
           for project in $(jq -c '.[]' __artifacts/projects.json); do
             # Extract directory name from JSON
             directory=$(echo "$project" | jq -r '.directory')
-             # Target zip file path
+            # Ensure directory is valid
+            if [ -z "$directory" ]; then
+              echo "Error: 'directory' field is missing or empty in JSON entry: $project"
+              exit 1
+            fi            
+            
+            # Target zip file path
             zip_file="__release/$directory.zip"              
           
             echo "Creating zip for: $directory"
