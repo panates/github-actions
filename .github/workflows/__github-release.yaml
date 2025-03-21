@@ -39,8 +39,8 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ inputs.tag }}
-          bodyFile: "__artifacts/COMMIT_CHANGELOG.md"
-          artifacts: "__release/**/*"
+          bodyFile: "__artifacts__/COMMIT_CHANGELOG.md"
+          artifacts: "__release__/**/*"
           token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
           draft: false
           prerelease: false
