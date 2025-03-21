@@ -41,14 +41,11 @@ jobs:
   # ***********************************
   github_release:
     name: 'Create Github Release'
-    runs-on: ubuntu-latest
     needs:
       - build
-    steps:
-      - name: Create Release
-        uses: panates/github-actions/.github/workflows/__github-release.yaml@dev
-        with:
-          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+    uses: panates/github-actions/.github/workflows/__github-release.yaml@dev
+    with:
+      PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 #
 #  # ***********************************
 #  # Job: Create GitHub release
