@@ -34,7 +34,7 @@ jobs:
       - name: "Loop over projects.json and create ZIP files"
         run: |
           mkdir -p __release
-          for project in $(jq -c '.projects[]' __artifacts/projects.json); do
+          for project in $(jq -c '.packages[]' __artifacts/projects.json); do
             # Extract directory name from JSON
             directory=$(echo "$project" | jq -r '.directory')
              # Target zip file path
