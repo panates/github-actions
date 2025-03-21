@@ -7,8 +7,8 @@ on:
         description: "Build script to be executed"
         default: 'npm run build'
     outputs:
-      lastVersion:
-        value: ${{ jobs.build.outputs.lastVersion }}
+      lastTag:
+        value: ${{ jobs.build.outputs.lastTag }}
     secrets:
       PERSONAL_ACCESS_TOKEN:
         description: "Github personal access token"
@@ -22,7 +22,7 @@ jobs:
     name: "Build Packages"
     runs-on: ubuntu-latest
     outputs:
-      lastVersion: ${{ steps.environment.outputs.lastVersion }}
+      lastTag: ${{ steps.environment.outputs.lastTag }}
 
     steps:
       - name: "Setup Environment"

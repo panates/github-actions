@@ -45,7 +45,7 @@ jobs:
       - build
     uses: panates/github-actions/.github/workflows/__github-release.yaml@dev
     with:
-      tag: ${{ needs.build.outputs.lastVersion }}
+      tag: ${{ needs.build.outputs.lastTag }}
     secrets:
       PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 #
