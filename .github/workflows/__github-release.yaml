@@ -20,6 +20,12 @@ jobs:
     name: 'Create Github Release'
     runs-on: ubuntu-latest
     steps:
+      - name: "Scan Environment"
+        id: environment
+        uses: panates/gh-repository-info@v1
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -47,6 +53,7 @@ jobs:
         id: create_release
         uses: ncipollo/release-action@v1
         with:
+          tag: ${{ steps.environment.outputs.lastVersion }}
           bodyFile: "__artifacts/COMMIT_CHANGELOG.md"
           artifacts: "__release/**"
           token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
