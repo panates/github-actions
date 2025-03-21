@@ -20056,7 +20056,6 @@ async function run() {
   const projects = JSON.parse(
     import_node_fs.default.readFileSync(import_node_path.default.join(artifactsDir, "projects.json"), "utf-8")
   );
-  console.log(projects);
   for (const pkg of projects) {
     if (!pkg.isNpmPackage) continue;
     const pkgDir = import_node_path.default.join(artifactsDir, pkg.directory);
@@ -20068,10 +20067,18 @@ async function run() {
       npmrcContent,
       "utf-8"
     );
+    const pkgJson = JSON.parse(
+      import_node_fs.default.readFileSync(import_node_path.default.join(pkgDir, "package.json"), "utf-8")
+    );
     try {
-      (0, import_node_child_process.execSync)('npm show "' + pkg.name + "@" + pkg.version + '" version', {
-        cwd: pkgDir
-      });
+      const registry = pkgJson.publishConfig?.registry;
+      (0, import_node_child_process.execSync)(
+        `npm show "${pkg.name}@${pkg.version} version` + (registry ? ` --registry ${registry}` : ""),
+        {
+          cwd: pkgDir,
+          stdio: "ignore"
+        }
+      );
       core.info(
         `Package ${import_ansi_colors.default.magenta(pkg.name)}@${import_ansi_colors.default.magenta(pkg.version)} already exists in npm repository. Skipping.`
       );

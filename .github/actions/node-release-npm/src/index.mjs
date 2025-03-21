@@ -19,7 +19,6 @@ async function run() {
   const projects = JSON.parse(
     fs.readFileSync(path.join(artifactsDir, "projects.json"), "utf-8"),
   );
-  console.log(projects);
 
   for (const pkg of projects) {
     if (!pkg.isNpmPackage) continue;
@@ -34,11 +33,21 @@ async function run() {
       "utf-8",
     );
 
+    const pkgJson = JSON.parse(
+      fs.readFileSync(path.join(pkgDir, "package.json"), "utf-8"),
+    );
+
     /** Check if package exists in repository */
     try {
-      execSync('npm show "' + pkg.name + "@" + pkg.version + '" version', {
-        cwd: pkgDir,
-      });
+      const registry = pkgJson.publishConfig?.registry;
+      execSync(
+        `npm show "${pkg.name}@${pkg.version} version` +
+          (registry ? ` --registry ${registry}` : ""),
+        {
+          cwd: pkgDir,
+          stdio: "ignore",
+        },
+      );
       core.info(
         `Package ${colors.magenta(pkg.name)}@${colors.magenta(pkg.version)} already exists in npm repository. Skipping.`,
       );
