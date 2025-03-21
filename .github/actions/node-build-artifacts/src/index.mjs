@@ -5,7 +5,10 @@ import colors from "ansi-colors";
 
 async function run() {
   const packages = JSON.parse(process.env.PACKAGES);
-  core.debug(packages);
+  if (!packages) {
+    core.setFailed("PACKAGES env must be set");
+    return;
+  }
 
   core.startGroup("Preparing directories");
 
