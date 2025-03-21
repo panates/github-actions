@@ -23,33 +23,42 @@ async function run() {
 
   for (const pkg of projects) {
     if (!pkg.isNpmPackage) continue;
+    const pkgDir = path.join(artifactsDir, pkg.directory);
 
-    const npmrcContent = `
-//npm.pkg.github.com/:_authToken=${personelAccessToken}
-`;
-    console.log("**** .npmrc content:\n\n", npmrcContent, "\n***********\n");
+    /** Create .npmrc file */
+    const npmrcContent = `//npm.pkg.github.com/:_authToken=${personelAccessToken}\n`;
+    console.log("**** .npmrc content:\n", npmrcContent, "***********\n");
     fs.appendFileSync(
       path.join(artifactsDir, pkg.directory, ".npmrc"),
       npmrcContent,
       "utf-8",
     );
 
-    if (await fetchVersionFromNpm(pkg.name + "@" + pkg.version)) {
+    /** Check if package exists in repository */
+    try {
+      execSync('npm show "' + pkg.name + "@" + pkg.version + '" version', {
+        cwd: pkgDir,
+      });
       core.info(
-        `Package ${colors.magenta(pkg.name)}@${colors.magenta(
-          pkg.version,
-        )} already exists on npm. Skipping`,
+        `Package ${colors.magenta(pkg.name)}@${colors.magenta(pkg.version)} already exists in npm repository. Skipping.`,
       );
       continue;
+    } catch (error) {
+      if (!error.message.includes("E404")) {
+        core.setFailed(
+          "Error fetching version from npm repository:" + error.message,
+        );
+        return;
+      }
     }
-    if (process.exitCode) return;
 
+    /** Publish package */
     core.info(
       `Publishing ${colors.magenta(pkg.name)}@${colors.magenta(pkg.version)}`,
     );
     try {
       execSync("npm publish", {
-        cwd: path.join(artifactsDir, pkg.directory),
+        cwd: pkgDir,
         stdio: "inherit",
       });
     } catch (error) {
@@ -58,18 +67,6 @@ async function run() {
     }
   }
   core.endGroup();
-}
-
-export async function fetchVersionFromNpm(packageName) {
-  try {
-    return execSync('npm show "' + packageName + '" version')
-      .toString()
-      .trim();
-  } catch (error) {
-    core.setFailed(
-      "Error fetching version from npm repository:" + error.message,
-    );
-  }
 }
 
 run().catch((error) => {
