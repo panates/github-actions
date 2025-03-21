@@ -7,13 +7,19 @@ async function run() {
   const packages = JSON.parse(process.env.PACKAGES);
   core.debug(packages);
 
+  const pkgJson = JSON.parse(fs.readFileSync("./package.json", "utf8"));
+
   core.startGroup("Preparing directories");
 
   const rootDir = process.env.GITHUB_WORKSPACE;
   const artifactsDir = path.join(rootDir, "__artifacts__");
   fs.mkdirSync(artifactsDir, { recursive: true });
 
-  const infoFile = [];
+  const infoFile = {
+    name: pkgJson.name,
+    tag: "",
+    packages: [],
+  };
   for (const pkg of packages) {
     core.info("Preparing", colors.magenta(`${pkg.name}`));
     const packageDir = path.join(rootDir, pkg.directory);
@@ -23,7 +29,7 @@ async function run() {
       continue;
     }
     const pkgDir = sanitizeFilename(pkg.name);
-    infoFile.push({
+    infoFile.packages.push({
       ...pkg,
       directory: pkgDir,
       buildDir: undefined,
@@ -49,8 +55,13 @@ async function run() {
 }
 
 function sanitizeFilename(filename, replacement = "-") {
-  // eslint-disable-next-line no-control-regex
-  return filename.replace(/[<>:"/\\|?*\x00-\x1F]/g, replacement).trim();
+  return (
+    filename
+      // eslint-disable-next-line no-control-regex
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, replacement)
+      .replace(/[@]/g, "")
+      .trim()
+  );
 }
 
 run().catch((error) => {

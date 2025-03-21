@@ -1,0 +1,55 @@
+name: "GitHub Release"
+on:
+  workflow_call:
+    secrets:
+      PERSONAL_ACCESS_TOKEN:
+        description: "Github personal access token"
+        required: true
+      DOCKERHUB_USERNAME:
+        description: "DockerHub user name"
+        required: false
+      DOCKERHUB_PASS:
+        description: "DockerHub password"
+        required: false
+
+jobs:
+  # ***********************************
+  # Job: Create GitHub release
+  # ***********************************
+  github_release:
+    name: 'Create Github Release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: 'artifacts'
+          path: './__artifacts'
+
+      - name: "Loop over projects.json and create ZIP files"
+        run: |
+          mkdir -p __release
+          for project in $(jq -c '.projects[]' __artifacts/projects.json); do
+            # Extract directory name from JSON
+            directory=$(echo "$project" | jq -r '.directory')
+             # Target zip file path
+            zip_file="__release/$directory.zip"              
+          
+            echo "Creating zip for: $directory"
+          
+            # Create zip file from the directory inside __artifacts
+            zip -r "$zip_file" "__artifacts/$directory"
+          
+            echo "Created: $zip_file"
+          done
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        with:
+          bodyFile: "__artifacts/COMMIT_CHANGELOG.md"
+          artifacts: "__release/**"
+          token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
+          draft: false
+          prerelease: false
+          replacesArtifacts: true
