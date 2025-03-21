@@ -19,12 +19,13 @@ async function run() {
   const projects = JSON.parse(
     fs.readFileSync(path.join(artifactsDir, "projects.json"), "utf-8"),
   );
+  console.log(projects);
 
   for (const pkg of projects) {
-    core.info(`Creating ${colors.magenta(pkg.dirname + ".zip")}`);
+    core.info(`Creating ${colors.magenta(pkg.directory + ".zip")}`);
     const zip = new Zip();
-    zip.addFolder(path.join(artifactsDir, pkg.dirname));
-    await zip.archive(path.join(releaseDir, `${pkg.dirname}.zip`));
+    zip.addFolder(path.join(artifactsDir, pkg.directory));
+    await zip.archive(path.join(releaseDir, `${pkg.directory}.zip`));
   }
   core.endGroup();
 }
