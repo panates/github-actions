@@ -22228,6 +22228,8 @@ async function npmExists(packageName, options) {
   } else if (auth?.type === "Basic") {
     headers.authorization = "Basic " + Buffer.from(auth.token).toString("base64");
   }
+  console.log(`Url: ${requestUrl}`);
+  console.log("authorization: ", headers.authorization);
   const response = await fetch(requestUrl, {
     method: "GET",
     headers

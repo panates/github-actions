@@ -25,6 +25,7 @@ export async function npmExists(packageName, options) {
   const requestUrl =
     `${registryUrl}/${packageName}}` +
     (options.version ? `/${options.version}` : "");
+
   const headers = {};
   if (auth?.type === "Bearer") {
     headers.authorization = `Bearer ${auth.token}`;
@@ -32,6 +33,11 @@ export async function npmExists(packageName, options) {
     headers.authorization =
       "Basic " + Buffer.from(auth.token).toString("base64");
   }
+
+  // eslint-disable-next-line no-console
+  console.log(`Url: ${requestUrl}`);
+  // eslint-disable-next-line no-console
+  console.log("authorization: ", headers.authorization);
 
   const response = await fetch(requestUrl, {
     method: "GET",
