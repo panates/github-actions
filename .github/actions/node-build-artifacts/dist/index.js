@@ -392,7 +392,7 @@ var require_tunnel = __commonJS({
         connectOptions.headers = connectOptions.headers || {};
         connectOptions.headers["Proxy-Authorization"] = "Basic " + new Buffer(connectOptions.proxyAuth).toString("base64");
       }
-      debug("making CONNECT request");
+      debug2("making CONNECT request");
       var connectReq = self.request(connectOptions);
       connectReq.useChunkedEncodingByDefault = false;
       connectReq.once("response", onResponse);
@@ -412,7 +412,7 @@ var require_tunnel = __commonJS({
         connectReq.removeAllListeners();
         socket.removeAllListeners();
         if (res.statusCode !== 200) {
-          debug(
+          debug2(
             "tunneling socket could not be established, statusCode=%d",
             res.statusCode
           );
@@ -424,7 +424,7 @@ var require_tunnel = __commonJS({
           return;
         }
         if (head.length > 0) {
-          debug("got illegal response body from proxy");
+          debug2("got illegal response body from proxy");
           socket.destroy();
           var error = new Error("got illegal response body from proxy");
           error.code = "ECONNRESET";
@@ -432,13 +432,13 @@ var require_tunnel = __commonJS({
           self.removeSocket(placeholder);
           return;
         }
-        debug("tunneling connection has established");
+        debug2("tunneling connection has established");
         self.sockets[self.sockets.indexOf(placeholder)] = socket;
         return cb(socket);
       }
       function onError(cause) {
         connectReq.removeAllListeners();
-        debug(
+        debug2(
           "tunneling socket could not be established, cause=%s\n",
           cause.message,
           cause.stack
@@ -500,9 +500,9 @@ var require_tunnel = __commonJS({
       }
       return target;
     }
-    var debug;
+    var debug2;
     if (process.env.NODE_DEBUG && /\btunnel\b/.test(process.env.NODE_DEBUG)) {
-      debug = function() {
+      debug2 = function() {
         var args = Array.prototype.slice.call(arguments);
         if (typeof args[0] === "string") {
           args[0] = "TUNNEL: " + args[0];
@@ -512,10 +512,10 @@ var require_tunnel = __commonJS({
         console.error.apply(console, args);
       };
     } else {
-      debug = function() {
+      debug2 = function() {
       };
     }
-    exports2.debug = debug;
+    exports2.debug = debug2;
   }
 });
 
@@ -17580,12 +17580,12 @@ var require_lib = __commonJS({
             throw new Error("Client has already been disposed.");
           }
           const parsedUrl = new URL(requestUrl);
-          let info2 = this._prepareRequest(verb, parsedUrl, headers);
+          let info = this._prepareRequest(verb, parsedUrl, headers);
           const maxTries = this._allowRetries && RetryableHttpVerbs.includes(verb) ? this._maxRetries + 1 : 1;
           let numTries = 0;
           let response;
           do {
-            response = yield this.requestRaw(info2, data);
+            response = yield this.requestRaw(info, data);
             if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
               let authenticationHandler;
               for (const handler of this.handlers) {
@@ -17595,7 +17595,7 @@ var require_lib = __commonJS({
                 }
               }
               if (authenticationHandler) {
-                return authenticationHandler.handleAuthentication(this, info2, data);
+                return authenticationHandler.handleAuthentication(this, info, data);
               } else {
                 return response;
               }
@@ -17618,8 +17618,8 @@ var require_lib = __commonJS({
                   }
                 }
               }
-              info2 = this._prepareRequest(verb, parsedRedirectUrl, headers);
-              response = yield this.requestRaw(info2, data);
+              info = this._prepareRequest(verb, parsedRedirectUrl, headers);
+              response = yield this.requestRaw(info, data);
               redirectsRemaining--;
             }
             if (!response.message.statusCode || !HttpResponseRetryCodes.includes(response.message.statusCode)) {
@@ -17648,7 +17648,7 @@ var require_lib = __commonJS({
        * @param info
        * @param data
        */
-      requestRaw(info2, data) {
+      requestRaw(info, data) {
         return __awaiter(this, void 0, void 0, function* () {
           return new Promise((resolve, reject) => {
             function callbackForResult(err, res) {
@@ -17660,7 +17660,7 @@ var require_lib = __commonJS({
                 resolve(res);
               }
             }
-            this.requestRawWithCallback(info2, data, callbackForResult);
+            this.requestRawWithCallback(info, data, callbackForResult);
           });
         });
       }
@@ -17670,12 +17670,12 @@ var require_lib = __commonJS({
        * @param data
        * @param onResult
        */
-      requestRawWithCallback(info2, data, onResult) {
+      requestRawWithCallback(info, data, onResult) {
         if (typeof data === "string") {
-          if (!info2.options.headers) {
-            info2.options.headers = {};
+          if (!info.options.headers) {
+            info.options.headers = {};
           }
-          info2.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
+          info.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
         }
         let callbackCalled = false;
         function handleResult(err, res) {
@@ -17684,7 +17684,7 @@ var require_lib = __commonJS({
             onResult(err, res);
           }
         }
-        const req = info2.httpModule.request(info2.options, (msg) => {
+        const req = info.httpModule.request(info.options, (msg) => {
           const res = new HttpClientResponse(msg);
           handleResult(void 0, res);
         });
@@ -17696,7 +17696,7 @@ var require_lib = __commonJS({
           if (socket) {
             socket.end();
           }
-          handleResult(new Error(`Request timeout: ${info2.options.path}`));
+          handleResult(new Error(`Request timeout: ${info.options.path}`));
         });
         req.on("error", function(err) {
           handleResult(err);
@@ -17732,27 +17732,27 @@ var require_lib = __commonJS({
         return this._getProxyAgentDispatcher(parsedUrl, proxyUrl);
       }
       _prepareRequest(method, requestUrl, headers) {
-        const info2 = {};
-        info2.parsedUrl = requestUrl;
-        const usingSsl = info2.parsedUrl.protocol === "https:";
-        info2.httpModule = usingSsl ? https : http;
+        const info = {};
+        info.parsedUrl = requestUrl;
+        const usingSsl = info.parsedUrl.protocol === "https:";
+        info.httpModule = usingSsl ? https : http;
         const defaultPort = usingSsl ? 443 : 80;
-        info2.options = {};
-        info2.options.host = info2.parsedUrl.hostname;
-        info2.options.port = info2.parsedUrl.port ? parseInt(info2.parsedUrl.port) : defaultPort;
-        info2.options.path = (info2.parsedUrl.pathname || "") + (info2.parsedUrl.search || "");
-        info2.options.method = method;
-        info2.options.headers = this._mergeHeaders(headers);
+        info.options = {};
+        info.options.host = info.parsedUrl.hostname;
+        info.options.port = info.parsedUrl.port ? parseInt(info.parsedUrl.port) : defaultPort;
+        info.options.path = (info.parsedUrl.pathname || "") + (info.parsedUrl.search || "");
+        info.options.method = method;
+        info.options.headers = this._mergeHeaders(headers);
         if (this.userAgent != null) {
-          info2.options.headers["user-agent"] = this.userAgent;
+          info.options.headers["user-agent"] = this.userAgent;
         }
-        info2.options.agent = this._getAgent(info2.parsedUrl);
+        info.options.agent = this._getAgent(info.parsedUrl);
         if (this.handlers) {
           for (const handler of this.handlers) {
-            handler.prepareRequest(info2.options);
+            handler.prepareRequest(info.options);
           }
         }
-        return info2;
+        return info;
       }
       _mergeHeaders(headers) {
         if (this.requestOptions && this.requestOptions.headers) {
@@ -19726,10 +19726,10 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       return process.env["RUNNER_DEBUG"] === "1";
     }
     exports2.isDebug = isDebug;
-    function debug(message) {
+    function debug2(message) {
       (0, command_1.issueCommand)("debug", {}, message);
     }
-    exports2.debug = debug;
+    exports2.debug = debug2;
     function error(message, properties = {}) {
       (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
@@ -19742,10 +19742,10 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       (0, command_1.issueCommand)("notice", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     exports2.notice = notice;
-    function info2(message) {
+    function info(message) {
       process.stdout.write(message + os.EOL);
     }
-    exports2.info = info2;
+    exports2.info = info;
     function startGroup2(name) {
       (0, command_1.issue)("group", name);
     }
@@ -20038,23 +20038,22 @@ var require_ansi_colors = __commonJS({
   }
 });
 
-// .github/actions/node-build/src/index.mjs
+// .github/actions/node-build-artifacts/src/index.mjs
 var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
 var core = __toESM(require_core(), 1);
 var import_ansi_colors = __toESM(require_ansi_colors(), 1);
 async function run() {
   const packages = JSON.parse(process.env.PACKAGES);
-  core.info(packages);
+  core.debug(packages);
   core.startGroup("Preparing directories");
   const rootDir = process.env.GITHUB_WORKSPACE;
   const artifactsDir = import_node_path.default.join(rootDir, "__artifacts__");
   import_node_fs.default.mkdirSync(artifactsDir, { recursive: true });
   const infoFile = [];
   for (const pkg of packages) {
-    core.info("Preparing", import_ansi_colors.default.magenta(`${pkg.name}`));
+    core.debug("Preparing", import_ansi_colors.default.magenta(`${pkg.name}`));
     const packageDir = import_node_path.default.join(rootDir, pkg.directory);
-    pkg.buildDir = "src";
     const buildDir = import_node_path.default.join(packageDir, pkg.buildDir || "./");
     if (!import_node_fs.default.existsSync(buildDir)) {
       core.warning("build directory do not exists. Skipping");
@@ -20066,19 +20065,22 @@ async function run() {
       directory: pkgDir,
       buildDir: void 0
     });
+    core.debug("Copying build files to artifacts dir");
     import_node_fs.default.cpSync(buildDir, import_node_path.default.join(artifactsDir, pkgDir), { recursive: true });
   }
+  core.debug("Writing packages info to json file");
   import_node_fs.default.writeFileSync(
-    import_node_path.default.join(artifactsDir, "packages.json"),
+    import_node_path.default.join(artifactsDir, "projects.json"),
     JSON.stringify(infoFile, null, 2)
   );
+  core.debug("Copying COMMIT_CHANGELOG.md to artifacts dir");
   import_node_fs.default.cpSync(
     import_node_path.default.join(rootDir, "COMMIT_CHANGELOG.md"),
     import_node_path.default.join(artifactsDir, "COMMIT_CHANGELOG.md")
   );
   core.endGroup();
 }
-function sanitizeFilename(filename, replacement = "_") {
+function sanitizeFilename(filename, replacement = "-") {
   return filename.replace(/[<>:"/\\|?*\x00-\x1F]/g, replacement).trim();
 }
 run().catch((error) => {

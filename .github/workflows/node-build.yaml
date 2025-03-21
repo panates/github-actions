@@ -33,93 +33,22 @@ jobs:
 
       - name: "Build Changelog"
         id: changelog
-        uses: mikepenz/release-changelog-builder-action@v5
+        uses: panates/github-actions/.github/actions/node-build-changelog@dev
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           fromTag: ${{ steps.environment.outputs.prevSha }}
           toTag: ${{ steps.environment.outputs.lastSha }}
-          mode: COMMIT
-          outputFile: "COMMIT_CHANGELOG.md"
-          configurationJson: |
-            {
-              "template": "#{{CHANGELOG}}\n## Contributors:\n- #{{CONTRIBUTORS}}",
-              "pr_template": "◉ #{{TITLE}}   (##{{NUMBER}})   by #{{AUTHOR_NAME}}  @#{{AUTHOR}}",
-              "commit_template": "◉ #{{TITLE}}   by #{{AUTHOR_NAME}}  @#{{AUTHOR}}",
-              "empty_template": "◉ no changes",
-              "categories": [
-                {
-                  "title": "## 🚀 Features",
-                  "labels": [
-                    "feat",
-                    "feature"
-                  ]
-                },
-                {
-                  "title": "## 🪲 Fixes",
-                  "labels": [
-                    "fix",
-                    "bug"
-                  ]
-                },
-                {
-                  "title": "## 🛠️ Updates",
-                  "labels": [
-                    "refactor",
-                    "update",
-                    "perf",
-                    "style"
-                  ]
-                },
-                {
-                  "title": "## 🧪 Tests",
-                  "key": "tests",
-                  "labels": [
-                    "test"
-                  ]
-                },
-                {
-                  "title": "## 📖 Documentation",
-                  "labels": [
-                    "doc"
-                  ]
-                },
-                {
-                  "title": "## 💬 Other",
-                  "labels": [
-                    "build",
-                    "ci"
-                  ]
-                }
-              ],
-              "ignore_labels": [
-                "ignore",
-                "chore",
-                "dev",
-                "style"
-              ],
-              "sort": {
-                "order": "ASC",
-                "on_property": "mergedAt"
-              },
-              "label_extractor": [
-                {
-                  "pattern": "^(feat|feature|fix|bug|refactor|update|perf|test|docs|build|ci|revert|chore|ignore|dev|style){1}(\\([\\w\\-\\.]+\\))?(!)?: ([\\w ])+([\\s\\S]*)",
-                  "target": "$1"
-                }
-              ]
-            }
 
       - name: "Print changelog"
         run: |
           cat COMMIT_CHANGELOG.md
 
-      #      - name: "Build"
-      #        shell: bash
-      #        run: |
-      #          ${{ inputs.build_script }}
-      #
+      - name: "Build Packages"
+        shell: bash
+        run: |
+          ${{ inputs.build_script }}
 
-      - name: Parse Directories
-        uses: panates/github-actions/.github/actions/node-build@dev
+      - name: "Upload Artifacts"
+        uses: panates/github-actions/.github/actions/node-build-artifacts@dev
         with:
           packages: ${{ steps.environment.outputs.packages }}

@@ -5,8 +5,7 @@ import colors from "ansi-colors";
 
 async function run() {
   const packages = JSON.parse(process.env.PACKAGES);
-  // core.debug(packages);
-  core.info(packages);
+  core.debug(packages);
 
   core.startGroup("Preparing directories");
 
@@ -16,9 +15,8 @@ async function run() {
 
   const infoFile = [];
   for (const pkg of packages) {
-    core.info("Preparing", colors.magenta(`${pkg.name}`));
+    core.debug("Preparing", colors.magenta(`${pkg.name}`));
     const packageDir = path.join(rootDir, pkg.directory);
-    pkg.buildDir = "src";
     const buildDir = path.join(packageDir, pkg.buildDir || "./");
     if (!fs.existsSync(buildDir)) {
       core.warning("build directory do not exists. Skipping");
@@ -32,14 +30,17 @@ async function run() {
     });
 
     /** Copy build files to artifacts dir */
+    core.debug("Copying build files to artifacts dir");
     fs.cpSync(buildDir, path.join(artifactsDir, pkgDir), { recursive: true });
   }
   /** Write package info to json file same basename with zip file */
+  core.debug("Writing packages info to json file");
   fs.writeFileSync(
-    path.join(artifactsDir, "packages.json"),
+    path.join(artifactsDir, "projects.json"),
     JSON.stringify(infoFile, null, 2),
   );
   /** Copy COMMIT_CHANGELOG.md to artifacts dir */
+  core.debug("Copying COMMIT_CHANGELOG.md to artifacts dir");
   fs.cpSync(
     path.join(rootDir, "COMMIT_CHANGELOG.md"),
     path.join(artifactsDir, "COMMIT_CHANGELOG.md"),
@@ -47,7 +48,7 @@ async function run() {
   core.endGroup();
 }
 
-function sanitizeFilename(filename, replacement = "_") {
+function sanitizeFilename(filename, replacement = "-") {
   // eslint-disable-next-line no-control-regex
   return filename.replace(/[<>:"/\\|?*\x00-\x1F]/g, replacement).trim();
 }

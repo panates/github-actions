@@ -2,15 +2,16 @@
   "private": true,
   "version": "1.0.1",
   "scripts": {
+    "prepare": "husky",
     "tag": "npm run tag:version && npm run tag:major && npm run tag:push",
     "tag:version": "git tag v$(node -p \"require('./package.json').version\") -f",
     "tag:major": "git tag -d v1 && git push origin :refs/tags/v1 && git tag v1 v$(node -p \"require('./package.json').version\") -f",
     "tag:push": "git push origin --tags",
-    "prebuild": "npm run lint",
-    "build": "node .github/actions/node-build/esbuild.config.js",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --max-warnings=0 --fix",
-    "prepare": "husky"
+    "prebuild": "npm run lint",
+    "build": "npm run build:1",
+    "build:1": "node .github/actions/node-build-artifacts/esbuild.config.js"
   },
   "devDependencies": {
     "@actions/core": "^1.11.1",
