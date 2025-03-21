@@ -1,28 +1,5 @@
-name: "Upload Artifacts"
-inputs:
-  packages:
-    required: true
-    description: "Packages to include"
+name: "Publish Npm Packages"
 
 runs:
-  using: "composite"
-  steps:
-    - name: "Loop over projects.json and create ZIP files"
-      shell: bash
-      run: |
-        JSON_FILE="__artifacts__/projects.json"
-        if [ ! -f "$JSON_FILE" ]; then
-          echo "Error: $JSON_FILE does not exist"
-          exit 1
-        fi
-        
-        if [ "$(jq length $JSON_FILE)" -eq 0 ]; then
-          echo "Error: __artifacts/projects.json is empty or does not contain valid data"
-          exit 1
-        fi
-                
-        for project in $(jq -c '.[]' "$JSON_FILE"); do
-          # Extract directory name from JSON
-          directory=$(echo "$project" | jq -r '.directory')
-          echo $directory        
-        done
+  using: "node20"
+  main: "dist/index.js"
