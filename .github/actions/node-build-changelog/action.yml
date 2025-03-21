@@ -1,0 +1,107 @@
+name: "Upload Artifacts"
+description: "Upload Build Artifacts"
+inputs:
+  token:
+    description: "Github personal access token"
+    required: true
+  fromTag:
+    description: 'Defines the previous tag to compare against'
+    required: true
+  toTag:
+    description: 'Defines the newly tag created'
+    required: true
+
+outputs:
+  changelog:
+    description: "The built release changelog built from the merged pull requests"
+    value: ${{ steps.changelog.changelog }}
+  fromTag:
+    description: "Lower bound to process pull requests for"
+    value: ${{ steps.changelog.fromTag }}
+  toTag:
+    description: "Upper bound to process pull request for"
+    value: ${{ steps.changelog.toTag }}
+  failed:
+    description: "Defines if there was an issue with the action run, and the changelog may not have been generated correctly. [true, false]"
+    value: ${{ steps.changelog.failed }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Build Changelog"
+      id: changelog
+      uses: mikepenz/release-changelog-builder-action@v5
+      with:
+        token: ${{ inputs.token }}
+        fromTag: ${{ inputs.fromTag }}
+        toTag: ${{ inputs.toTag }}
+        mode: COMMIT
+        outputFile: "COMMIT_CHANGELOG.md"
+        configurationJson: |
+          {
+            "template": "#{{CHANGELOG}}\n## Contributors:\n- #{{CONTRIBUTORS}}",
+            "pr_template": "◉ #{{TITLE}}   (##{{NUMBER}})   by #{{AUTHOR_NAME}}  @#{{AUTHOR}}",
+            "commit_template": "◉ #{{TITLE}}   by #{{AUTHOR_NAME}}  @#{{AUTHOR}}",
+            "empty_template": "◉ no changes",
+            "categories": [
+              {
+                "title": "## 🚀 Features",
+                "labels": [
+                  "feat",
+                  "feature"
+                ]
+              },
+              {
+                "title": "## 🪲 Fixes",
+                "labels": [
+                  "fix",
+                  "bug"
+                ]
+              },
+              {
+                "title": "## 🛠️ Updates",
+                "labels": [
+                  "refactor",
+                  "update",
+                  "perf",
+                  "style"
+                ]
+              },
+              {
+                "title": "## 🧪 Tests",
+                "key": "tests",
+                "labels": [
+                  "test"
+                ]
+              },
+              {
+                "title": "## 📖 Documentation",
+                "labels": [
+                  "doc"
+                ]
+              },
+              {
+                "title": "## 💬 Other",
+                "labels": [
+                  "build",
+                  "ci"
+                ]
+              }
+            ],
+            "ignore_labels": [
+              "ignore",
+              "chore",
+              "dev",
+              "style"
+            ],
+            "sort": {
+              "order": "ASC",
+              "on_property": "mergedAt"
+            },
+            "label_extractor": [
+              {
+                "pattern": "^(feat|feature|fix|bug|refactor|update|perf|test|docs|build|ci|revert|chore|ignore|dev|style){1}(\\([\\w\\-\\.]+\\))?(!)?: ([\\w ])+([\\s\\S]*)",
+                "target": "$1"
+              }
+            ]
+          }
