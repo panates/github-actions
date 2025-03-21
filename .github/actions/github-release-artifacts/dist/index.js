@@ -23243,11 +23243,12 @@ async function run() {
   const projects = JSON.parse(
     import_node_fs.default.readFileSync(import_node_path.default.join(artifactsDir, "projects.json"), "utf-8")
   );
+  console.log(projects);
   for (const pkg of projects) {
-    core.info(`Creating ${import_ansi_colors.default.magenta(pkg.dirname + ".zip")}`);
+    core.info(`Creating ${import_ansi_colors.default.magenta(pkg.directory + ".zip")}`);
     const zip = new import_zip_lib.Zip();
-    zip.addFolder(import_node_path.default.join(artifactsDir, pkg.dirname));
-    await zip.archive(import_node_path.default.join(releaseDir, `${pkg.dirname}.zip`));
+    zip.addFolder(import_node_path.default.join(artifactsDir, pkg.directory));
+    await zip.archive(import_node_path.default.join(releaseDir, `${pkg.directory}.zip`));
   }
   core.endGroup();
 }
