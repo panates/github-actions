@@ -53,7 +53,7 @@ jobs:
           path: './__artifacts__'
 
       - name: "Create ZIP files"
-        uses: panates/github-actions/.github/actions/github-release-npm@dev
+        uses: panates/github-actions/.github/actions/node-release-npm@dev
 
 
 #  # ***********************************
