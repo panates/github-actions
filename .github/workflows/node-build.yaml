@@ -31,18 +31,18 @@ jobs:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           fetch-depth: 100
 
+      - name: "Scan Environment"
+        id: environment
+        uses: panates/gh-repository-info@v1
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
       - name: "Check git tag"
         run: |
           if [ -z "${{ steps.environment.outputs.lastTag }}" ]; then
             echo "Error: No git tag found."
             exit 1
           fi          
-
-      - name: "Scan Environment"
-        id: environment
-        uses: panates/gh-repository-info@v1
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
       - name: "Build Changelog"
         id: changelog
