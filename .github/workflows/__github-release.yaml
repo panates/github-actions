@@ -54,7 +54,7 @@ jobs:
         with:
           tag: ${{ inputs.tag }}
           bodyFile: "__artifacts/COMMIT_CHANGELOG.md"
-          artifacts: "__release/**"
+          artifacts: "__release/**/*"
           token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
           draft: false
           prerelease: false
