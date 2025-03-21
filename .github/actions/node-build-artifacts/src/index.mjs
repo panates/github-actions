@@ -7,19 +7,13 @@ async function run() {
   const packages = JSON.parse(process.env.PACKAGES);
   core.debug(packages);
 
-  const pkgJson = JSON.parse(fs.readFileSync("./package.json", "utf8"));
-
   core.startGroup("Preparing directories");
 
   const rootDir = process.env.GITHUB_WORKSPACE;
   const artifactsDir = path.join(rootDir, "__artifacts__");
   fs.mkdirSync(artifactsDir, { recursive: true });
 
-  const infoFile = {
-    name: pkgJson.name,
-    tag: "",
-    packages: [],
-  };
+  const infoFile = [];
   for (const pkg of packages) {
     core.info("Preparing", colors.magenta(`${pkg.name}`));
     const packageDir = path.join(rootDir, pkg.directory);
@@ -29,7 +23,7 @@ async function run() {
       continue;
     }
     const pkgDir = sanitizeFilename(pkg.name);
-    infoFile.packages.push({
+    infoFile.push({
       ...pkg,
       directory: pkgDir,
       buildDir: undefined,

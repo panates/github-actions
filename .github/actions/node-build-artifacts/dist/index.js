@@ -20046,16 +20046,11 @@ var import_ansi_colors = __toESM(require_ansi_colors(), 1);
 async function run() {
   const packages = JSON.parse(process.env.PACKAGES);
   core.debug(packages);
-  const pkgJson = JSON.parse(import_node_fs.default.readFileSync("./package.json", "utf8"));
   core.startGroup("Preparing directories");
   const rootDir = process.env.GITHUB_WORKSPACE;
   const artifactsDir = import_node_path.default.join(rootDir, "__artifacts__");
   import_node_fs.default.mkdirSync(artifactsDir, { recursive: true });
-  const infoFile = {
-    name: pkgJson.name,
-    tag: "",
-    packages: []
-  };
+  const infoFile = [];
   for (const pkg of packages) {
     core.info("Preparing", import_ansi_colors.default.magenta(`${pkg.name}`));
     const packageDir = import_node_path.default.join(rootDir, pkg.directory);
@@ -20065,7 +20060,7 @@ async function run() {
       continue;
     }
     const pkgDir = sanitizeFilename(pkg.name);
-    infoFile.packages.push({
+    infoFile.push({
       ...pkg,
       directory: pkgDir,
       buildDir: void 0
