@@ -2,7 +2,6 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import * as core from "@actions/core";
-import * as github from "@actions/github";
 import colors from "ansi-colors";
 
 async function run() {
@@ -26,7 +25,7 @@ async function run() {
     if (!pkg.isNpmPackage) continue;
 
     const npmrcContent = `
-@${github.context.repo.owner}:registry=https://npm.pkg.github.com/:_authToken=${personelAccessToken}
+//npm.pkg.github.com/:_authToken=${personelAccessToken}
 `;
     console.log("**** .npmrc content:\n\n", npmrcContent, "\n***********\n");
     fs.appendFileSync(
