@@ -30,7 +30,7 @@ jobs:
   # ***********************************
   build:
     name: Build Packages
-    uses: ./.gihthub/workflows/node-build.yaml
+    uses: panates/github-actions/.gihthub/workflows/node-build.yaml@dev
     with:
       build_script:  ${{ inputs.build_script }}
     secrets:

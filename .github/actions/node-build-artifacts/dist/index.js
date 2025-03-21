@@ -20065,7 +20065,7 @@ async function run() {
       directory: pkgDir,
       buildDir: void 0
     });
-    core.info(`Copying build files from ${pkgDir}`);
+    core.info(`Copying build files from ${buildDir}`);
     import_node_fs.default.cpSync(buildDir, import_node_path.default.join(artifactsDir, pkgDir), { recursive: true });
   }
   core.info("Writing projects.json file");
