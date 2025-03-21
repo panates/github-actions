@@ -41,7 +41,7 @@ async function run() {
     try {
       const registry = pkgJson.publishConfig?.registry;
       execSync(
-        `npm show "${pkg.name}@${pkg.version} version` +
+        `npm show ${pkg.name}@${pkg.version} version` +
           (registry ? ` --registry ${registry}` : ""),
         {
           cwd: pkgDir,

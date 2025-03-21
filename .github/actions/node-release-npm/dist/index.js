@@ -20073,7 +20073,7 @@ async function run() {
     try {
       const registry = pkgJson.publishConfig?.registry;
       (0, import_node_child_process.execSync)(
-        `npm show "${pkg.name}@${pkg.version} version` + (registry ? ` --registry ${registry}` : ""),
+        `npm show ${pkg.name}@${pkg.version} version` + (registry ? ` --registry ${registry}` : ""),
         {
           cwd: pkgDir,
           stdio: "ignore"
