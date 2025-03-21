@@ -52,7 +52,7 @@ jobs:
           name: 'artifacts'
           path: './__artifacts__'
 
-      - name: "Create ZIP files"
+      - name: "Publish Npm Packages"
         uses: panates/github-actions/.github/actions/node-release-npm@dev
 
 
