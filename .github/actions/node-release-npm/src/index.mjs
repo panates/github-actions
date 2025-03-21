@@ -2,9 +2,12 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import * as core from "@actions/core";
+import * as github from "@actions/github";
 import colors from "ansi-colors";
 
 async function run() {
+  const personelAccessToken = core.getInput("token", { required: true });
+
   core.startGroup("Publishing npm packages");
 
   const rootDir = process.env.GITHUB_WORKSPACE;
@@ -35,6 +38,15 @@ async function run() {
       `Publishing ${colors.magenta(pkg.name)}@${colors.magenta(pkg.version)}`,
     );
     try {
+      const npmrcContent = `
+@${github.context.repo.owner}:registry=https://npm.pkg.github.com/:_authToken=${personelAccessToken}
+`;
+      fs.appendFileSync(
+        path.join(artifactsDir, pkg.directory, ".npmrc"),
+        npmrcContent,
+        "utf-8",
+      );
+
       execSync("npm publish", {
         cwd: path.join(artifactsDir, pkg.directory),
         stdio: "inherit",

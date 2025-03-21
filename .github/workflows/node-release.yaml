@@ -54,6 +54,8 @@ jobs:
 
       - name: "Publish Npm Packages"
         uses: panates/github-actions/.github/actions/node-release-npm@dev
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
 
 #  # ***********************************
