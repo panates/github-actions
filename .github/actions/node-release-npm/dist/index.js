@@ -13045,7 +13045,7 @@ var require_fetch = __commonJS({
         this.emit("terminated", error);
       }
     };
-    function fetch(input, init = {}) {
+    function fetch2(input, init = {}) {
       webidl.argumentLengthCheck(arguments, 1, { header: "globalThis.fetch" });
       const p = createDeferredPromise();
       let requestObject;
@@ -13975,7 +13975,7 @@ var require_fetch = __commonJS({
       }
     }
     module2.exports = {
-      fetch,
+      fetch: fetch2,
       Fetch,
       fetching,
       finalizeAndReportTiming
@@ -17231,7 +17231,7 @@ var require_undici = __commonJS({
     module2.exports.getGlobalDispatcher = getGlobalDispatcher;
     if (util.nodeMajor > 16 || util.nodeMajor === 16 && util.nodeMinor >= 8) {
       let fetchImpl = null;
-      module2.exports.fetch = async function fetch(resource) {
+      module2.exports.fetch = async function fetch2(resource) {
         if (!fetchImpl) {
           fetchImpl = require_fetch().fetch;
         }
@@ -20044,6 +20044,28 @@ var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
 var core = __toESM(require_core(), 1);
 var import_ansi_colors = __toESM(require_ansi_colors(), 1);
+
+// .github/actions/node-release-npm/src/npm-check.js
+async function npmExists(packageName, version, registry) {
+  registry = registry || "https://registry.npmjs.org";
+  while (registry.endsWith("/")) {
+    registry = registry.slice(0, -1);
+  }
+  const registryUrl = `${registry}/${packageName}}` + (version ? `/${version}` : "");
+  const response = await fetch(registryUrl, {
+    method: "GET"
+  });
+  if (response.status === 200) {
+    const packageData = await response.json();
+    return packageData.version;
+  }
+  if (response.status === 404) {
+    return "";
+  }
+  throw new Error(`Unexpected status code: ${response.status}`);
+}
+
+// .github/actions/node-release-npm/src/index.mjs
 async function run() {
   const personelAccessToken = core.getInput("token", { required: true });
   const rootDir = process.env.GITHUB_WORKSPACE;
@@ -20069,26 +20091,13 @@ async function run() {
     const pkgJson = JSON.parse(
       import_node_fs.default.readFileSync(import_node_path.default.join(pkgDir, "package.json"), "utf-8")
     );
-    try {
-      const registry = pkgJson.publishConfig?.registry;
-      (0, import_node_child_process.execSync)(
-        `npm show ${pkg.name}@${pkg.version} version` + (registry ? ` --registry ${registry}` : ""),
-        {
-          cwd: pkgDir,
-          stdio: "ignore"
-        }
-      );
+    if (await npmExists(pkg.name, pkg.version, pkgJson.publishConfig?.registry)) {
       core.info(
-        `Package ${import_ansi_colors.default.magenta(pkg.name + "@" + pkg.version)} already exists in npm repository. Skipping.`
+        `Package ${import_ansi_colors.default.magenta(
+          pkg.name + "@" + pkg.version
+        )} already exists in npm repository. Skipping.`
       );
       continue;
-    } catch (error) {
-      if (!error.message.includes("E404")) {
-        core.setFailed(
-          "Error fetching version from npm repository:" + error.message
-        );
-        return;
-      }
     }
     core.info(`Publishing ${import_ansi_colors.default.magenta(pkg.name + "@" + pkg.version)}`);
     try {

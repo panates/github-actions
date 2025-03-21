@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
+import { npmExists } from "./npm-check.js";
 
 async function run() {
   const personelAccessToken = core.getInput("token", { required: true });
@@ -36,27 +37,15 @@ async function run() {
     );
 
     /** Check if package exists in repository */
-    try {
-      const registry = pkgJson.publishConfig?.registry;
-      execSync(
-        `npm show ${pkg.name}@${pkg.version} version` +
-          (registry ? ` --registry ${registry}` : ""),
-        {
-          cwd: pkgDir,
-          stdio: "ignore",
-        },
-      );
+    if (
+      await npmExists(pkg.name, pkg.version, pkgJson.publishConfig?.registry)
+    ) {
       core.info(
-        `Package ${colors.magenta(pkg.name + "@" + pkg.version)} already exists in npm repository. Skipping.`,
+        `Package ${colors.magenta(
+          pkg.name + "@" + pkg.version,
+        )} already exists in npm repository. Skipping.`,
       );
       continue;
-    } catch (error) {
-      if (!error.message.includes("E404")) {
-        core.setFailed(
-          "Error fetching version from npm repository:" + error.message,
-        );
-        return;
-      }
     }
 
     /** Publish package */
