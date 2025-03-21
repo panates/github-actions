@@ -30,7 +30,7 @@ async function run() {
     });
 
     /** Copy build files to artifacts dir */
-    core.info(`Copying build files from ${pkgDir}`);
+    core.info(`Copying build files from ${buildDir}`);
     fs.cpSync(buildDir, path.join(artifactsDir, pkgDir), { recursive: true });
   }
   /** Write package info to json file same basename with zip file */
