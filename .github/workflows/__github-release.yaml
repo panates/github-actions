@@ -1,6 +1,11 @@
 name: "GitHub Release"
 on:
   workflow_call:
+    inputs:
+      tag:
+        type: string
+        description: "GitHub Release Tag"
+        required: true
     secrets:
       PERSONAL_ACCESS_TOKEN:
         description: "Github personal access token"
@@ -20,12 +25,6 @@ jobs:
     name: 'Create Github Release'
     runs-on: ubuntu-latest
     steps:
-      - name: "Scan Environment"
-        id: environment
-        uses: panates/gh-repository-info@v1
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -53,7 +52,7 @@ jobs:
         id: create_release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ steps.environment.outputs.lastVersion }}
+          tag: ${{ inputs.tag }}
           bodyFile: "__artifacts/COMMIT_CHANGELOG.md"
           artifacts: "__release/**"
           token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
