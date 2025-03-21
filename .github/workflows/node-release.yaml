@@ -36,40 +36,56 @@ jobs:
     secrets:
       PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
+
   # ***********************************
-  # Job: Create GitHub release
+  # Job: Publish npm packages
   # ***********************************
-  github_release:
-    name: 'Create Github Release'
+  npm_publish:
+    name: 'Publish npm packages'
     needs:
       - build
-    uses: panates/github-actions/.github/workflows/__github-release.yaml@dev
-    with:
-      tag: ${{ needs.build.outputs.lastTag }}
-    secrets:
-      PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-#
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: 'artifacts'
+          path: './__artifacts__'
+
+      - name: "Create ZIP files"
+        uses: panates/github-actions/.github/actions/github-release-npm@dev
+
+
 #  # ***********************************
 #  # Job: Create GitHub release
 #  # ***********************************
-#  create_app_releases:
-#    name: 'Create App Releases'
-#    if: ${{ always() && needs.publish_packages.outputs.appFiles != '' }}
-#    runs-on: ubuntu-latest
+#  github_release:
+#    name: 'Create Github Release'
 #    needs:
-#      - publish_packages
-#      - create_lib_releases
-#    strategy:
-#      matrix:
-#        releaseFile: ${{ fromJson(needs.publish_packages.outputs.appFilesArray) }}
+#      - build
+#    runs-on: ubuntu-latest
 #    steps:
-#      - name: Create Release
-#        uses: kimvar-inc/manifests/.github/actions/create-release@main
+#      - name: Download artifacts
+#        uses: actions/download-artifact@v4
 #        with:
-#          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-#          file_basename: ${{matrix.releaseFile}}
-#          is_library: "false"
+#          name: 'artifacts'
+#          path: './__artifacts__'
 #
+#      - name: "Create ZIP files"
+#        uses: panates/github-actions/.github/actions/github-release-artifacts@dev
+#
+#      - name: Create GitHub Release
+#        id: create_release
+#        uses: ncipollo/release-action@v1
+#        with:
+#          tag: ${{ needs.build.outputs.lastTag }}
+#          bodyFile: "__artifacts__/COMMIT_CHANGELOG.md"
+#          artifacts: "__release__/**/*"
+#          token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
+#          draft: false
+#          prerelease: false
+#          replacesArtifacts: true
+
 #  # ***********************************
 #  # Job: Create Docker Images
 #  # ***********************************
