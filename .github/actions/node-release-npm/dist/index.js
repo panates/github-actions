@@ -20057,7 +20057,7 @@ async function npmExists(packageName, options) {
   } catch (error) {
     const msg = error.stderr.toString();
     if (msg.includes("E404")) return;
-    console.error("Error fetching version from npm repository:", msg);
+    throw new Error(msg);
   }
 }
 
@@ -20104,7 +20104,8 @@ async function run() {
     );
     if (await npmExists(pkg.name, {
       version: pkg.version,
-      registry: pkgJson.publishConfig?.registry
+      registry: pkgJson.publishConfig?.registry,
+      cwd: pkgDir
     })) {
       core.info(
         `Package ${import_ansi_colors.default.magenta(
