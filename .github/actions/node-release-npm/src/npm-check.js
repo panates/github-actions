@@ -28,8 +28,6 @@ export async function npmExists(packageName, options) {
     return version;
   } catch (error) {
     const msg = error.stderr.toString();
-    // eslint-disable-next-line no-console
-    console.log("Error: ", msg);
     if (msg.includes("E404")) {
       core.debug(msg);
       return;
