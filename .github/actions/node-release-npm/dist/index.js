@@ -392,7 +392,7 @@ var require_tunnel = __commonJS({
         connectOptions.headers = connectOptions.headers || {};
         connectOptions.headers["Proxy-Authorization"] = "Basic " + new Buffer(connectOptions.proxyAuth).toString("base64");
       }
-      debug("making CONNECT request");
+      debug2("making CONNECT request");
       var connectReq = self.request(connectOptions);
       connectReq.useChunkedEncodingByDefault = false;
       connectReq.once("response", onResponse);
@@ -412,7 +412,7 @@ var require_tunnel = __commonJS({
         connectReq.removeAllListeners();
         socket.removeAllListeners();
         if (res.statusCode !== 200) {
-          debug(
+          debug2(
             "tunneling socket could not be established, statusCode=%d",
             res.statusCode
           );
@@ -424,7 +424,7 @@ var require_tunnel = __commonJS({
           return;
         }
         if (head.length > 0) {
-          debug("got illegal response body from proxy");
+          debug2("got illegal response body from proxy");
           socket.destroy();
           var error = new Error("got illegal response body from proxy");
           error.code = "ECONNRESET";
@@ -432,13 +432,13 @@ var require_tunnel = __commonJS({
           self.removeSocket(placeholder);
           return;
         }
-        debug("tunneling connection has established");
+        debug2("tunneling connection has established");
         self.sockets[self.sockets.indexOf(placeholder)] = socket;
         return cb(socket);
       }
       function onError(cause) {
         connectReq.removeAllListeners();
-        debug(
+        debug2(
           "tunneling socket could not be established, cause=%s\n",
           cause.message,
           cause.stack
@@ -500,9 +500,9 @@ var require_tunnel = __commonJS({
       }
       return target;
     }
-    var debug;
+    var debug2;
     if (process.env.NODE_DEBUG && /\btunnel\b/.test(process.env.NODE_DEBUG)) {
-      debug = function() {
+      debug2 = function() {
         var args = Array.prototype.slice.call(arguments);
         if (typeof args[0] === "string") {
           args[0] = "TUNNEL: " + args[0];
@@ -512,10 +512,10 @@ var require_tunnel = __commonJS({
         console.error.apply(console, args);
       };
     } else {
-      debug = function() {
+      debug2 = function() {
       };
     }
-    exports2.debug = debug;
+    exports2.debug = debug2;
   }
 });
 
@@ -19726,10 +19726,10 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       return process.env["RUNNER_DEBUG"] === "1";
     }
     exports2.isDebug = isDebug;
-    function debug(message) {
+    function debug2(message) {
       (0, command_1.issueCommand)("debug", {}, message);
     }
-    exports2.debug = debug;
+    exports2.debug = debug2;
     function error(message, properties = {}) {
       (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
@@ -20042,21 +20042,32 @@ var require_ansi_colors = __commonJS({
 var import_node_child_process2 = require("node:child_process");
 var import_node_fs2 = __toESM(require("node:fs"), 1);
 var import_node_path2 = __toESM(require("node:path"), 1);
-var core = __toESM(require_core(), 1);
+var core2 = __toESM(require_core(), 1);
 var import_ansi_colors = __toESM(require_ansi_colors(), 1);
 
 // .github/actions/node-release-npm/src/npm-check.js
 var import_node_child_process = require("node:child_process");
+var core = __toESM(require_core());
 async function npmExists(packageName, options) {
   const registry = options?.registry || "https://registry.npmjs.org";
   try {
-    return (0, import_node_child_process.execSync)(
+    const version = (0, import_node_child_process.execSync)(
       `npm show ${packageName} version` + (registry ? ` --registry ${registry}` : ""),
-      { cwd: options.cwd, stdio: "pipe" }
+      {
+        cwd: options?.cwd,
+        stdio: "pipe"
+      }
     ).toString().trim();
+    core.debug(version);
+    console.log(version);
+    return version;
   } catch (error) {
     const msg = error.stderr.toString();
-    if (msg.includes("E404")) return;
+    console.log("Error: ", msg);
+    if (msg.includes("E404")) {
+      core.debug(msg);
+      return;
+    }
     throw new Error(msg);
   }
 }
@@ -20081,11 +20092,11 @@ function setNpmrcValue(key, value, cwd) {
 
 // .github/actions/node-release-npm/src/index.mjs
 async function run() {
-  const personelAccessToken = core.getInput("token", { required: true });
+  const personelAccessToken = core2.getInput("token", { required: true });
   const rootDir = process.env.GITHUB_WORKSPACE;
   const artifactsDir = import_node_path2.default.join(rootDir, "__artifacts__");
   if (!import_node_fs2.default.existsSync(artifactsDir)) {
-    core.setFailed("__artifacts__ directory do not exists");
+    core2.setFailed("__artifacts__ directory do not exists");
     return;
   }
   const projects = JSON.parse(
@@ -20107,14 +20118,14 @@ async function run() {
       registry: pkgJson.publishConfig?.registry,
       cwd: pkgDir
     })) {
-      core.info(
+      core2.info(
         `Package ${import_ansi_colors.default.magenta(
           pkg.name + "@" + pkg.version
         )} already exists in npm repository. Skipping.`
       );
       continue;
     }
-    core.info(`Publishing ${import_ansi_colors.default.magenta(pkg.name + "@" + pkg.version)}`);
+    core2.info(`Publishing ${import_ansi_colors.default.magenta(pkg.name + "@" + pkg.version)}`);
     try {
       (0, import_node_child_process2.execSync)("npm publish", {
         cwd: pkgDir,
@@ -20122,13 +20133,13 @@ async function run() {
       });
     } catch (error) {
       const msg = error.stderr.toString();
-      core.setFailed(msg);
+      core2.setFailed(msg);
       return;
     }
   }
 }
 run().catch((error) => {
-  core.setFailed(error);
+  core2.setFailed(error);
 });
 /*! Bundled license information:
 
