@@ -4,6 +4,7 @@ import path from "node:path";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
 import { npmExists } from "./npm-check.js";
+import { setNpmrcValue } from "./npmrc-utils.js";
 
 async function run() {
   const personelAccessToken = core.getInput("token", { required: true });
@@ -23,13 +24,10 @@ async function run() {
     if (!pkg.isNpmPackage) continue;
     const pkgDir = path.join(artifactsDir, pkg.directory);
 
-    /** Create .npmrc file */
-    const npmrcContent = `//npm.pkg.github.com/:_authToken=${personelAccessToken}\n`;
-    console.log("**** .npmrc content:\n", npmrcContent, "***********\n");
-    fs.appendFileSync(
-      path.join(artifactsDir, pkg.directory, ".npmrc"),
-      npmrcContent,
-      "utf-8",
+    setNpmrcValue(
+      "//npm.pkg.github.com/:_authToken",
+      personelAccessToken,
+      pkgDir,
     );
 
     const pkgJson = JSON.parse(
@@ -56,10 +54,11 @@ async function run() {
     try {
       execSync("npm publish", {
         cwd: pkgDir,
-        stdio: "inherit",
+        stdio: "pipe",
       });
     } catch (error) {
-      core.setFailed(error);
+      const msg = error.stderr.toString();
+      core.setFailed(msg);
       return;
     }
   }

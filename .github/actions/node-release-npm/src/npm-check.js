@@ -1,55 +1,27 @@
-import getAuthToken from "registry-auth-token";
-import getRegistryUrl from "registry-auth-token/registry-url";
-
-const PACKAGE_NAME_PATTERN = /^(@[^/]+)?(.+)$/;
+import { execSync } from "node:child_process";
 
 /**
  *
  * @param packageName
  * @param {string} [options]
  * @param {string} [options.version]
- * @param {string} options.registry
+ * @param {string} [options.registry]
+ * @param {string} [options.cwd]
  * @returns {Promise<string|undefined>}
  */
 export async function npmExists(packageName, options) {
-  const m = PACKAGE_NAME_PATTERN.exec(packageName);
-  if (!m) throw new Error(`Invalid package name: ${packageName}`);
-
-  let registryUrl = options?.registry || getRegistryUrl(m[1]);
-  while (registryUrl.endsWith("/")) {
-    registryUrl = registryUrl.slice(0, -1);
+  const registry = options?.registry || "https://registry.npmjs.org";
+  try {
+    return execSync(
+      `npm show ${packageName} version` +
+        (registry ? ` --registry ${registry}` : ""),
+      { cwd: options.cwd, stdio: "pipe" },
+    )
+      .toString()
+      .trim();
+  } catch (error) {
+    const msg = error.stderr.toString();
+    if (msg.includes("E404")) return;
+    console.error("Error fetching version from npm repository:", msg);
   }
-
-  const auth = getAuthToken(registryUrl);
-
-  const requestUrl =
-    `${registryUrl}/${packageName}}` +
-    (options.version ? `/${options.version}` : "");
-
-  const headers = {};
-  if (auth?.type === "Bearer") {
-    headers.authorization = `Bearer ${auth.token}`;
-  } else if (auth?.type === "Basic") {
-    headers.authorization =
-      "Basic " + Buffer.from(auth.token).toString("base64");
-  }
-
-  // eslint-disable-next-line no-console
-  console.log(`Url: ${requestUrl}`);
-  // eslint-disable-next-line no-console
-  console.log("authorization: ", headers.authorization);
-
-  const response = await fetch(requestUrl, {
-    method: "GET",
-    headers,
-  });
-
-  if (response.status === 200) {
-    const packageData = await response.json();
-    return packageData?.version;
-  }
-  if (response.status === 404) {
-    return "";
-  }
-  throw new Error(`Unexpected status code: ${response.status}`);
 }
