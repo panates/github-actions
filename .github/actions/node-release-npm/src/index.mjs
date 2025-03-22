@@ -39,6 +39,7 @@ async function run() {
       await npmExists(pkg.name, {
         version: pkg.version,
         registry: pkgJson.publishConfig?.registry,
+        cwd: pkgDir,
       })
     ) {
       core.info(

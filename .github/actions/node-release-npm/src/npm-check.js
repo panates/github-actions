@@ -22,6 +22,6 @@ export async function npmExists(packageName, options) {
   } catch (error) {
     const msg = error.stderr.toString();
     if (msg.includes("E404")) return;
-    console.error("Error fetching version from npm repository:", msg);
+    throw new Error(msg);
   }
 }
