@@ -13,6 +13,7 @@ import * as core from "@actions/core";
 export async function npmExists(packageName, options) {
   const registry = options?.registry || "https://registry.npmjs.org";
   try {
+    if (options.version) packageName += `@${options.version}`;
     const version = execSync(
       `npm show ${packageName} version` +
         (registry ? ` --registry ${registry}` : ""),
@@ -24,8 +25,6 @@ export async function npmExists(packageName, options) {
       .toString()
       .trim();
     core.debug(version);
-    // eslint-disable-next-line no-console
-    console.log(version);
     return version;
   } catch (error) {
     const msg = error.stderr.toString();

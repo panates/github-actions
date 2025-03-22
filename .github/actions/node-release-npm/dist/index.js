@@ -20051,6 +20051,7 @@ var core = __toESM(require_core());
 async function npmExists(packageName, options) {
   const registry = options?.registry || "https://registry.npmjs.org";
   try {
+    if (options.version) packageName += `@${options.version}`;
     const version = (0, import_node_child_process.execSync)(
       `npm show ${packageName} version` + (registry ? ` --registry ${registry}` : ""),
       {
@@ -20059,7 +20060,6 @@ async function npmExists(packageName, options) {
       }
     ).toString().trim();
     core.debug(version);
-    console.log(version);
     return version;
   } catch (error) {
     const msg = error.stderr.toString();
