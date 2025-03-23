@@ -78,7 +78,7 @@ async function run() {
 
     if (dockerApps.length) {
       core.info(colors.yellow(`Creating and publishing docker images..`));
-      for (const pkg of npmPackages) {
+      for (const pkg of dockerApps) {
         await dockerPublish({
           ...ctx,
           pkg,

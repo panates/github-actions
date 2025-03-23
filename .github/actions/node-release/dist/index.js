@@ -20235,7 +20235,7 @@ async function run() {
     }
     if (dockerApps.length) {
       core4.info(import_ansi_colors3.default.yellow(`Creating and publishing docker images..`));
-      for (const pkg of npmPackages) {
+      for (const pkg of dockerApps) {
         await dockerPublish({
           ...ctx,
           pkg,
