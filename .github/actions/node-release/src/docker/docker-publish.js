@@ -15,7 +15,7 @@ import colors from "ansi-colors";
  * @returns {Promise<void>}
  */
 export async function dockerPublish(args) {
-  const { rootDir, pkg, dockerHubUsername, dockerPlatforms } = args;
+  const { token, rootDir, pkg, dockerHubUsername, dockerPlatforms } = args;
   const pkgDir = path.join(rootDir, pkg.directory);
   const buildDir = path.join(pkgDir, pkg.buildDir || "./");
 
@@ -34,6 +34,7 @@ export async function dockerPublish(args) {
   );
   await execSync(
     `docker buildx build --platform ${dockerPlatforms}` +
+      ` --build-arg GITHUB_TOKEN=${token} ` +
       ` -t  ${fullImageName}:${pkgJson.version}` +
       ` -t  ${fullImageName}:latest` +
       " --push .",

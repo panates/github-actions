@@ -20052,7 +20052,7 @@ var import_node_path = __toESM(require("node:path"));
 var core = __toESM(require_core());
 var import_ansi_colors = __toESM(require_ansi_colors());
 async function dockerPublish(args) {
-  const { rootDir, pkg, dockerHubUsername, dockerPlatforms } = args;
+  const { token, rootDir, pkg, dockerHubUsername, dockerPlatforms } = args;
   const pkgDir = import_node_path.default.join(rootDir, pkg.directory);
   const buildDir = import_node_path.default.join(pkgDir, pkg.buildDir || "./");
   const pkgJson = JSON.parse(
@@ -20064,7 +20064,7 @@ async function dockerPublish(args) {
     `\u{1F9EA} Building docker image ` + import_ansi_colors.default.magenta(fullImageName + ":" + pkgJson.version)
   );
   await (0, import_node_child_process.execSync)(
-    `docker buildx build --platform ${dockerPlatforms} -t  ${fullImageName}:${pkgJson.version} -t  ${fullImageName}:latest --push .`,
+    `docker buildx build --platform ${dockerPlatforms} --build-arg GITHUB_TOKEN=${token}  -t  ${fullImageName}:${pkgJson.version} -t  ${fullImageName}:latest --push .`,
     {
       cwd: pkgDir,
       stdio: "inherit"
