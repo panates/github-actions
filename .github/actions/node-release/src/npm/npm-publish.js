@@ -30,6 +30,11 @@ export async function npmPublish(args) {
   setNpmrcValue("//npm.pkg.github.com/:_authToken", token, buildDir);
 
   /** Check if package exists in repository */
+  core.info(
+    `Checking if ${colors.magenta(
+      pkgJson.name + "@" + pkgJson.version,
+    )} exists in npm registry`,
+  );
   if (
     await npmExists(pkg.name, {
       version: pkgJson.version,

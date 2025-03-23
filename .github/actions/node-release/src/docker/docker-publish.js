@@ -27,11 +27,6 @@ export async function dockerPublish(args) {
   const imageName = sanitizePackageName(pkgJson.name);
   const fullImageName = `${dockerHubUsername}/${imageName}`;
 
-  core.info(`🔧 One-time setup if buildx isn’t initialized`);
-  await execCmd("docker buildx create --use || true", {
-    cwd: pkgDir,
-  });
-
   /** Publish package */
   core.info(
     `🧪 Building docker image ` +

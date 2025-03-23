@@ -20074,10 +20074,6 @@ async function dockerPublish(args) {
   );
   const imageName = sanitizePackageName(pkgJson.name);
   const fullImageName = `${dockerHubUsername}/${imageName}`;
-  core.info(`\u{1F527} One-time setup if buildx isn\u2019t initialized`);
-  await execCmd("docker buildx create --use || true", {
-    cwd: pkgDir
-  });
   core.info(
     `\u{1F9EA} Building docker image ` + import_ansi_colors.default.magenta(fullImageName + ":" + pkgJson.version)
   );
@@ -20151,6 +20147,11 @@ async function npmPublish(args) {
     import_node_fs3.default.readFileSync(import_node_path3.default.join(buildDir, "package.json"), "utf-8")
   );
   setNpmrcValue("//npm.pkg.github.com/:_authToken", token, buildDir);
+  core3.info(
+    `Checking if ${import_ansi_colors2.default.magenta(
+      pkgJson.name + "@" + pkgJson.version
+    )} exists in npm registry`
+  );
   if (await npmExists(pkg.name, {
     version: pkgJson.version,
     registry: pkgJson.publishConfig?.registry,
@@ -20210,6 +20211,10 @@ async function run() {
       await execCmd(
         `docker login --username ${dockerHubUsername} --password ${dockerHubPassword}`
       );
+      core4.info(import_ansi_colors3.default.green("Docker login successful."));
+      core4.info(import_ansi_colors3.default.yellow(`\u{1F527} One-time setup if buildx isn\u2019t initialized`));
+      await execCmd("docker buildx create --use || true");
+      core4.info(import_ansi_colors3.default.green("buildx initialization successful."));
     }
     const ctx = {
       token,

@@ -52,6 +52,10 @@ async function run() {
       await execCmd(
         `docker login --username ${dockerHubUsername} --password ${dockerHubPassword}`,
       );
+      core.info(colors.green("Docker login successful."));
+      core.info(colors.yellow(`🔧 One-time setup if buildx isn’t initialized`));
+      await execCmd("docker buildx create --use || true");
+      core.info(colors.green("buildx initialization successful."));
     }
 
     const ctx = {
