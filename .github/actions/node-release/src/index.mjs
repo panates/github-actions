@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import * as core from "@actions/core";
@@ -49,8 +50,9 @@ async function run() {
         core.getInput("docker-platforms") || "linux/amd64,linux/arm64";
       /** Login to docker */
       core.info(colors.yellow(`🔐 Logging into docker..`));
-      await execCmd(
-        `docker login --username ${dockerHubUsername} --password ${dockerHubPassword}`,
+      await execSync(
+        `echo "${dockerHubPassword}" | docker login --username ${dockerHubUsername} --password-stdin`,
+        { stdio: "inherit" },
       );
       core.info(colors.green("Docker login successful."));
       core.info(colors.yellow(`🔧 One-time setup if buildx isn’t initialized`));

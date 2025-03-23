@@ -20039,6 +20039,7 @@ var require_ansi_colors = __commonJS({
 });
 
 // .github/actions/node-release/src/index.mjs
+var import_node_child_process3 = require("node:child_process");
 var import_node_fs4 = __toESM(require("node:fs"), 1);
 var import_node_path4 = __toESM(require("node:path"), 1);
 var core4 = __toESM(require_core(), 1);
@@ -20208,8 +20209,9 @@ async function run() {
       });
       dockerPlatforms = core4.getInput("docker-platforms") || "linux/amd64,linux/arm64";
       core4.info(import_ansi_colors3.default.yellow(`\u{1F510} Logging into docker..`));
-      await execCmd(
-        `docker login --username ${dockerHubUsername} --password ${dockerHubPassword}`
+      await (0, import_node_child_process3.execSync)(
+        `echo "${dockerHubPassword}" | docker login --username ${dockerHubUsername} --password-stdin`,
+        { stdio: "inherit" }
       );
       core4.info(import_ansi_colors3.default.green("Docker login successful."));
       core4.info(import_ansi_colors3.default.yellow(`\u{1F527} One-time setup if buildx isn\u2019t initialized`));
