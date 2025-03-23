@@ -5,7 +5,6 @@ import * as core from "@actions/core";
 import colors from "ansi-colors";
 import { dockerPublish } from "./docker/docker-publish.js";
 import { npmPublish } from "./npm/npm-publish.js";
-import { execCmd } from "./utils/exec-cmd.js";
 
 async function run() {
   const token = core.getInput("token", { required: true });
@@ -56,7 +55,9 @@ async function run() {
       );
       core.info(colors.green("Docker login successful."));
       core.info(colors.yellow(`🔧 One-time setup if buildx isn’t initialized`));
-      await execCmd("docker buildx create --use || true");
+      await execSync("docker buildx create --use || true", {
+        stdio: "inherit",
+      });
       core.info(colors.green("buildx initialization successful."));
     }
 

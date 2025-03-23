@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 
 export async function execCmd(cmd, options) {
   try {
-    return execSync("npm publish", {
+    return execSync(cmd, {
       ...options,
       stdio: "pipe",
     });

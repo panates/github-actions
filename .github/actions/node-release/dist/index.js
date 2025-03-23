@@ -20085,7 +20085,7 @@ var import_ansi_colors2 = __toESM(require_ansi_colors());
 var import_node_child_process2 = require("node:child_process");
 async function execCmd(cmd, options) {
   try {
-    return (0, import_node_child_process2.execSync)("npm publish", {
+    return (0, import_node_child_process2.execSync)(cmd, {
       ...options,
       stdio: "pipe"
     });
@@ -20215,7 +20215,9 @@ async function run() {
       );
       core4.info(import_ansi_colors3.default.green("Docker login successful."));
       core4.info(import_ansi_colors3.default.yellow(`\u{1F527} One-time setup if buildx isn\u2019t initialized`));
-      await execCmd("docker buildx create --use || true");
+      await (0, import_node_child_process4.execSync)("docker buildx create --use || true", {
+        stdio: "inherit"
+      });
       core4.info(import_ansi_colors3.default.green("buildx initialization successful."));
     }
     const ctx = {
