@@ -20185,7 +20185,7 @@ async function run() {
   const rootDir = process.env.GITHUB_WORKSPACE || process.cwd();
   try {
     const validatedPackages = packages.filter((pkg) => {
-      const pkgDir = import_node_path4.default.join(rootDir, pkg.dir);
+      const pkgDir = import_node_path4.default.join(rootDir, pkg.directory);
       const buildDir = import_node_path4.default.join(pkgDir, pkg.buildDir || "./");
       if (!import_node_fs4.default.existsSync(buildDir)) {
         core4.warning("build directory do not exists. Skipping");
@@ -20236,7 +20236,7 @@ async function run() {
       }
     }
   } catch (error) {
-    core4.setFailed(error.message);
+    core4.setFailed(error);
   }
 }
 run().catch((error) => {

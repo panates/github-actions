@@ -24,7 +24,7 @@ async function run() {
   try {
     /** Validate package directories */
     const validatedPackages = packages.filter((pkg) => {
-      const pkgDir = path.join(rootDir, pkg.dir);
+      const pkgDir = path.join(rootDir, pkg.directory);
       const buildDir = path.join(pkgDir, pkg.buildDir || "./");
       if (!fs.existsSync(buildDir)) {
         core.warning("build directory do not exists. Skipping");
@@ -81,7 +81,7 @@ async function run() {
       }
     }
   } catch (error) {
-    core.setFailed(error.message);
+    core.setFailed(error);
   }
 }
 
