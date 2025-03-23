@@ -7,7 +7,7 @@ import { npmExists } from "./npm-check.js";
 import { setNpmrcValue } from "./npmrc-utils.js";
 
 async function run() {
-  const personelAccessToken = core.getInput("token", { required: true });
+  const token = core.getInput("token", { required: true });
 
   const rootDir = process.env.GITHUB_WORKSPACE;
   const artifactsDir = path.join(rootDir, "__artifacts__");
@@ -24,11 +24,7 @@ async function run() {
     if (!pkg.isNpmPackage) continue;
     const pkgDir = path.join(artifactsDir, pkg.directory);
 
-    setNpmrcValue(
-      "//npm.pkg.github.com/:_authToken",
-      personelAccessToken,
-      pkgDir,
-    );
+    setNpmrcValue("//npm.pkg.github.com/:_authToken", token, pkgDir);
 
     const pkgJson = JSON.parse(
       fs.readFileSync(path.join(pkgDir, "package.json"), "utf-8"),

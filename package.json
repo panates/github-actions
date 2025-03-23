@@ -10,10 +10,11 @@
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --max-warnings=0 --fix",
     "prebuild": "npm run lint",
-    "build": "npm run build:1 && npm run build:2 && npm run build:3",
+    "build": "npm run build:1 && npm run build:2 && npm run build:3 && npm run build:4",
     "build:1": "node .github/actions/node-build-artifacts/esbuild.config.js",
     "build:2": "node .github/actions/node-release-npm/esbuild.config.js",
-    "build:3": "node .github/actions/github-release-artifacts/esbuild.config.js"
+    "build:3": "node .github/actions/node-release/esbuild.config.js",
+    "build:4": "node .github/actions/github-release-artifacts/esbuild.config.js"
   },
   "devDependencies": {
     "@actions/core": "^1.11.1",

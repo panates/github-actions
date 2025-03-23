@@ -35,6 +35,13 @@ async function run() {
     /** Copy build files to artifacts dir */
     core.info(`Copying build files from ${buildDir}`);
     fs.cpSync(buildDir, path.join(artifactsDir, pkgDir), { recursive: true });
+    /** Copy Dockerfile to artifacts dir */
+    if (fs.existsSync(path.join(packageDir, "Dockerfile"))) {
+      fs.cpSync(
+        path.join(packageDir, "Dockerfile"),
+        path.join(artifactsDir, pkgDir, "Dockerfile"),
+      );
+    }
   }
   /** Write package info to json file same basename with zip file */
   core.info("Writing projects.json file");

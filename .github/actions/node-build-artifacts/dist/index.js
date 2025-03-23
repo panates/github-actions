@@ -20070,6 +20070,12 @@ async function run() {
     });
     core.info(`Copying build files from ${buildDir}`);
     import_node_fs.default.cpSync(buildDir, import_node_path.default.join(artifactsDir, pkgDir), { recursive: true });
+    if (import_node_fs.default.existsSync(import_node_path.default.join(packageDir, "Dockerfile"))) {
+      import_node_fs.default.cpSync(
+        import_node_path.default.join(packageDir, "Dockerfile"),
+        import_node_path.default.join(artifactsDir, pkgDir, "Dockerfile")
+      );
+    }
   }
   core.info("Writing projects.json file");
   import_node_fs.default.writeFileSync(
