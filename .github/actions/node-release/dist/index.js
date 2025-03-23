@@ -20182,7 +20182,7 @@ async function run() {
     core4.setFailed('Error parsing "packages" input value. ' + error.message);
     return;
   }
-  const rootDir = process.env.GITHUB_WORKSPACE;
+  const rootDir = process.env.GITHUB_WORKSPACE || process.cwd();
   try {
     const validatedPackages = packages.filter((pkg) => {
       const pkgDir = import_node_path4.default.join(rootDir, pkg.dir);

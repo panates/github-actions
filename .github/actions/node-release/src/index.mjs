@@ -19,7 +19,7 @@ async function run() {
     return;
   }
 
-  const rootDir = process.env.GITHUB_WORKSPACE;
+  const rootDir = process.env.GITHUB_WORKSPACE || process.cwd();
 
   try {
     /** Validate package directories */
