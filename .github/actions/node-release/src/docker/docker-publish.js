@@ -1,8 +1,8 @@
+import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
-import { execCmd } from "../utils/exec-cmd.js";
 
 /**
  *
@@ -32,13 +32,14 @@ export async function dockerPublish(args) {
     `🧪 Building docker image ` +
       colors.magenta(fullImageName + ":" + pkgJson.version),
   );
-  await execCmd(
+  await execSync(
     `docker buildx build --platform ${dockerPlatforms}` +
       ` -t  ${fullImageName}:${pkgJson.version}` +
       ` -t  ${fullImageName}:latest` +
       " --push .",
     {
       cwd: pkgDir,
+      stdio: "inherit",
     },
   );
 }

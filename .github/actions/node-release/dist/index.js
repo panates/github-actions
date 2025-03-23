@@ -20039,33 +20039,18 @@ var require_ansi_colors = __commonJS({
 });
 
 // .github/actions/node-release/src/index.mjs
-var import_node_child_process3 = require("node:child_process");
+var import_node_child_process4 = require("node:child_process");
 var import_node_fs4 = __toESM(require("node:fs"), 1);
 var import_node_path4 = __toESM(require("node:path"), 1);
 var core4 = __toESM(require_core(), 1);
 var import_ansi_colors3 = __toESM(require_ansi_colors(), 1);
 
 // .github/actions/node-release/src/docker/docker-publish.js
+var import_node_child_process = require("node:child_process");
 var import_node_fs = __toESM(require("node:fs"));
 var import_node_path = __toESM(require("node:path"));
 var core = __toESM(require_core());
 var import_ansi_colors = __toESM(require_ansi_colors());
-
-// .github/actions/node-release/src/utils/exec-cmd.js
-var import_node_child_process = require("node:child_process");
-async function execCmd(cmd, options) {
-  try {
-    return (0, import_node_child_process.execSync)("npm publish", {
-      ...options,
-      stdio: "pipe"
-    });
-  } catch (error) {
-    const msg = error.stderr?.toString();
-    throw new Error(msg);
-  }
-}
-
-// .github/actions/node-release/src/docker/docker-publish.js
 async function dockerPublish(args) {
   const { rootDir, pkg, dockerHubUsername, dockerPlatforms } = args;
   const pkgDir = import_node_path.default.join(rootDir, pkg.directory);
@@ -20078,10 +20063,11 @@ async function dockerPublish(args) {
   core.info(
     `\u{1F9EA} Building docker image ` + import_ansi_colors.default.magenta(fullImageName + ":" + pkgJson.version)
   );
-  await execCmd(
+  await (0, import_node_child_process.execSync)(
     `docker buildx build --platform ${dockerPlatforms} -t  ${fullImageName}:${pkgJson.version} -t  ${fullImageName}:latest --push .`,
     {
-      cwd: pkgDir
+      cwd: pkgDir,
+      stdio: "inherit"
     }
   );
 }
@@ -20095,14 +20081,28 @@ var import_node_path3 = __toESM(require("node:path"));
 var core3 = __toESM(require_core());
 var import_ansi_colors2 = __toESM(require_ansi_colors());
 
-// .github/actions/node-release/src/npm/npm-exists.js
+// .github/actions/node-release/src/utils/exec-cmd.js
 var import_node_child_process2 = require("node:child_process");
+async function execCmd(cmd, options) {
+  try {
+    return (0, import_node_child_process2.execSync)("npm publish", {
+      ...options,
+      stdio: "pipe"
+    });
+  } catch (error) {
+    const msg = error.stderr?.toString();
+    throw new Error(msg);
+  }
+}
+
+// .github/actions/node-release/src/npm/npm-exists.js
+var import_node_child_process3 = require("node:child_process");
 var core2 = __toESM(require_core());
 async function npmExists(packageName, options) {
   const registry = options?.registry || "https://registry.npmjs.org";
   try {
     if (options.version) packageName += `@${options.version}`;
-    const version = (0, import_node_child_process2.execSync)(
+    const version = (0, import_node_child_process3.execSync)(
       `npm show ${packageName} version` + (registry ? ` --registry ${registry}` : ""),
       {
         cwd: options?.cwd,
@@ -20209,7 +20209,7 @@ async function run() {
       });
       dockerPlatforms = core4.getInput("docker-platforms") || "linux/amd64,linux/arm64";
       core4.info(import_ansi_colors3.default.yellow(`\u{1F510} Logging into docker..`));
-      await (0, import_node_child_process3.execSync)(
+      await (0, import_node_child_process4.execSync)(
         `echo "${dockerHubPassword}" | docker login --username ${dockerHubUsername} --password-stdin`,
         { stdio: "inherit" }
       );
