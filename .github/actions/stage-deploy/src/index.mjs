@@ -71,7 +71,7 @@ async function run() {
         Pair(_, pair) {
           if (
             String(pair.key) === "image" &&
-            String(pair.key.value).includes(dockerhubNamespace)
+            String(pair.value).startsWith(dockerhubNamespace + "/")
           ) {
             pair.value = imageUrl;
           }
