@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
+import yaml from "yaml";
 
 async function run() {
   /** Read packages inputs */
@@ -63,6 +64,15 @@ async function run() {
 
       const stageFileContent = fs.readFileSync(stageFile, "utf-8");
       core.info("stageFileContent: \n" + stageFileContent);
+
+      const doc = yaml.parseDocument(stageFileContent);
+      // Traverse & update
+      doc.contents.items.forEach((item) => {
+        if (item.has("image")) {
+          item.set("image", imageUrl);
+        }
+      });
+      core.info("stageFileContent: \n" + String(doc));
 
       // /** Publish package */
       // core.info(

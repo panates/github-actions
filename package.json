@@ -24,6 +24,7 @@
     "globals": "^16.0.0",
     "esbuild": "^0.25.1",
     "registry-auth-token": "^5.1.0",
+    "yaml": "^2.7.0",
     "zip-lib": "^1.0.5"
   }
 }
