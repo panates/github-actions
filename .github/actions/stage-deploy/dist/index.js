@@ -20064,6 +20064,7 @@ async function run() {
   try {
     core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into dockerhub..`));
     const r = await fetch(`https://hub.docker.com/v2/users/login/`, {
+      method: "POST",
       body: JSON.stringify({
         username: dockerHubUsername,
         password: dockerHubPassword
