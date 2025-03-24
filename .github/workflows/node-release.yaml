@@ -6,14 +6,22 @@ on:
         type: string
         description: "Build script to be executed"
         default: 'npm run build'
+      workspace:
+        type: string
+        description: "The default working directory on the runner for steps, and the default location of your repository when using the checkout action"
+        default: ${{github.workspace}}
+      npm-publish:
+        type: string
+        description: "Determines if packages will be published to npm registry"
+        default: 'true'
       dockerize:
         type: string
         description: "Determines if docker image will be created"
-        default: 'false'
-      before_dockerize:
-        description: "Shell commands before build docker image"
+        default: 'true'
+      docker-platforms:
         type: string
-        default: ''
+        description: "Comma seperated target platforms for Docker images"
+        default: 'linux/amd64'
       stage_version:
         description: "Stage file version prefix"
         type: string
@@ -68,10 +76,51 @@ jobs:
         run: |
           ${{ inputs.build_script }}
 
-      - name: "Publish Packages"
-        uses: panates/github-actions/.github/actions/node-release@dev
+      - name: "Publish Npm Packages"
+        if: ${{ inputs.npm-publish == 'true'}}
+        uses: panates/github-actions/.github/actions/release-npm@dev
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          workspace: ${{ inputs.workspace }}
           packages: ${{ steps.environment.outputs.packages }}
-          dockerhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
-          dockerhub-password: ${{ secrets.DOCKERHUB_PASS }}
+
+      - name: "Publish Npm Packages"
+        if: ${{ inputs.dockerize == 'true'}}
+        uses: panates/github-actions/.github/actions/release-docker@dev
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          workspace: ${{ inputs.workspace }}
+          packages: ${{ steps.environment.outputs.packages }}
+          docker-platforms: ${{ inputs.docker-platforms }}
+          docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
+          docherhub-password: ${{ secrets.DOCKERHUB_PASS }}
+
+#  # ***********************************
+#  # Job: Create GitHub release
+#  # ***********************************
+#  github_release:
+#    name: 'Create Github Release'
+#    needs:
+#      - build
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Download artifacts
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: 'artifacts'
+#          path: './__artifacts__'
+#
+#      - name: "Create ZIP files"
+#        uses: panates/github-actions/.github/actions/github-release-artifacts@dev
+#
+#      - name: Create GitHub Release
+#        id: create_release
+#        uses: ncipollo/release-action@v1
+#        with:
+#          tag: ${{ needs.build.outputs.lastTag }}
+#          bodyFile: "__artifacts__/COMMIT_CHANGELOG.md"
+#          artifacts: "__release__/**/*"
+#          token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
+#          draft: false
+#          prerelease: false
+#          replacesArtifacts: true

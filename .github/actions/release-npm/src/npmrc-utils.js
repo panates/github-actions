@@ -5,10 +5,11 @@ import path from "node:path";
  *
  * @param {string} key
  * @param {string }value
- * @param {string} [cwd]
+ * @param {string} [options]
+ * @param {string} [options.cwd]
  */
-export function setNpmrcValue(key, value, cwd) {
-  const npmrcPath = path.join(cwd || process.cwd(), ".npmrc");
+export function setNpmrcValue(key, value, options) {
+  const npmrcPath = path.join(options?.cwd || process.cwd(), ".npmrc");
   let npmrcContent = fs.existsSync(npmrcPath)
     ? fs.readFileSync(npmrcPath, "utf8")
     : "";
