@@ -27369,9 +27369,11 @@ async function run() {
       const stageFileContent = import_node_fs.default.readFileSync(stageFile, "utf-8");
       core.info("stageFileContent: \n" + stageFileContent);
       const doc = import_yaml.default.parseDocument(stageFileContent);
-      doc.contents.items.forEach((item) => {
-        if (item.has("image")) {
-          item.set("image", imageUrl);
+      import_yaml.default.visit(doc, {
+        Pair(_, pair) {
+          if (pair.key === "image" && String(pair.key.value).includes(dockerhubNamespace)) {
+            pair.value = imageUrl;
+          }
         }
       });
       core.info("stageFileContent: \n" + String(doc));

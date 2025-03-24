@@ -67,11 +67,17 @@ async function run() {
 
       const doc = yaml.parseDocument(stageFileContent);
       // Traverse & update
-      doc.contents.items.forEach((item) => {
-        if (item.has("image")) {
-          item.set("image", imageUrl);
-        }
+      yaml.visit(doc, {
+        Pair(_, pair) {
+          if (
+            pair.key === "image" &&
+            String(pair.key.value).includes(dockerhubNamespace)
+          ) {
+            pair.value = imageUrl;
+          }
+        },
       });
+
       core.info("stageFileContent: \n" + String(doc));
 
       // /** Publish package */
