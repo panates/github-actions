@@ -27371,7 +27371,7 @@ async function run() {
       const doc = import_yaml.default.parseDocument(stageFileContent);
       import_yaml.default.visit(doc, {
         Pair(_, pair) {
-          if (pair.key === "image" && String(pair.key.value).includes(dockerhubNamespace)) {
+          if (String(pair.key) === "image" && String(pair.key.value).includes(dockerhubNamespace)) {
             pair.value = imageUrl;
           }
         }

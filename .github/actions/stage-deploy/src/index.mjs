@@ -70,7 +70,7 @@ async function run() {
       yaml.visit(doc, {
         Pair(_, pair) {
           if (
-            pair.key === "image" &&
+            String(pair.key) === "image" &&
             String(pair.key.value).includes(dockerhubNamespace)
           ) {
             pair.value = imageUrl;
