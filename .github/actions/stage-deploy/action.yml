@@ -16,6 +16,9 @@ inputs:
     description: "Dockerhub namespace"
     type: string
     required: true
+  stage-directory:
+    description: "Stage directory"
+    type: string
   stage-file-prefix:
     description: "Stage file prefix"
     type: string

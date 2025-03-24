@@ -29,6 +29,9 @@ on:
         description: "Git repository for stage files"
         type: string
         default: 'main'
+      stage-directory:
+        description: "Stage directory"
+        type: string
       stage-file-prefix:
         description: "Stage file prefix"
         type: string
@@ -144,6 +147,7 @@ jobs:
           dockerhub-namespace: ${{ secrets.DOCKERHUB_NAMESPACE }}
           docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
           docherhub-password: ${{ secrets.DOCKERHUB_PASS }}
+          stage-directory: ${{ inputs.stage-directory }}
           stage-file-prefix: ${{ inputs.stage-file-prefix }}
           stage-file-suffix: ${{ inputs.stage-file-suffix }}
 

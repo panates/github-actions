@@ -13045,7 +13045,7 @@ var require_fetch = __commonJS({
         this.emit("terminated", error);
       }
     };
-    function fetch(input, init = {}) {
+    function fetch2(input, init = {}) {
       webidl.argumentLengthCheck(arguments, 1, { header: "globalThis.fetch" });
       const p = createDeferredPromise();
       let requestObject;
@@ -13975,7 +13975,7 @@ var require_fetch = __commonJS({
       }
     }
     module2.exports = {
-      fetch,
+      fetch: fetch2,
       Fetch,
       fetching,
       finalizeAndReportTiming
@@ -17231,7 +17231,7 @@ var require_undici = __commonJS({
     module2.exports.getGlobalDispatcher = getGlobalDispatcher;
     if (util.nodeMajor > 16 || util.nodeMajor === 16 && util.nodeMinor >= 8) {
       let fetchImpl = null;
-      module2.exports.fetch = async function fetch(resource) {
+      module2.exports.fetch = async function fetch2(resource) {
         if (!fetchImpl) {
           fetchImpl = require_fetch().fetch;
         }
@@ -20039,7 +20039,6 @@ var require_ansi_colors = __commonJS({
 });
 
 // .github/actions/stage-deploy/src/index.mjs
-var import_node_child_process = require("node:child_process");
 var core = __toESM(require_core(), 1);
 var import_ansi_colors = __toESM(require_ansi_colors(), 1);
 async function run() {
@@ -20053,21 +20052,40 @@ async function run() {
   const dockerhubNamespace = core.getInput("dockerhub-namespace", {
     required: true
   });
+  const stageDirectory = core.getInput("stage-directory") || "";
+  const stageFilePrefix = core.getInput("stage-file-prefix") || "";
+  const stageFileSuffix = core.getInput("stage-file-suffix") || "";
   core.info("dockerhubNamespace: " + dockerhubNamespace);
   core.info("dockerHubUsername: " + dockerHubUsername);
   core.info("dockerhubNamespace: " + dockerhubNamespace);
+  core.info("stageDirectory: " + stageDirectory);
+  core.info("stageFilePrefix: " + stageFilePrefix);
+  core.info("stageFileSuffix: " + stageFileSuffix);
   try {
-    core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into docker..`));
-    await (0, import_node_child_process.execSync)(
-      `echo "${dockerHubPassword}" | docker login --username ${dockerHubUsername} --password-stdin`,
-      { stdio: "inherit" }
-    );
+    core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into dockerhub..`));
+    const r = await fetch(`https://hub.docker.com/v2/users/login/`, {
+      body: JSON.stringify({
+        username: dockerHubUsername,
+        password: dockerHubPassword
+      })
+    });
+    const token = (await r.json()).token;
+    core.info("token: " + token);
     for (const pkg of packages) {
       if (!pkg.isDockerApp) continue;
+      core.info(`\u{1F9EA} Updating stage file for ` + import_ansi_colors.default.magenta(pkg.name));
+      const imageName = sanitizePackageName(pkg.name);
+      const stageFile = `${dockerhubNamespace}/${stageFilePrefix}${imageName}${stageFileSuffix}`;
+      const imageUrl = `${dockerhubNamespace}/${imageName}:${pkg.version}`;
+      core.info("stageFile: " + stageFile);
+      core.info("imageUrl: " + imageUrl);
     }
   } catch (error) {
     core.setFailed(error);
   }
+}
+function sanitizePackageName(name, replacement = "-") {
+  return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, replacement).replace(/[@]/g, "").trim();
 }
 run().catch((error) => {
   core.setFailed(error);

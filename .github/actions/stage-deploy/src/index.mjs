@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
 
@@ -15,34 +14,38 @@ async function run() {
   const dockerhubNamespace = core.getInput("dockerhub-namespace", {
     required: true,
   });
+  const stageDirectory = core.getInput("stage-directory") || "";
+  const stageFilePrefix = core.getInput("stage-file-prefix") || "";
+  const stageFileSuffix = core.getInput("stage-file-suffix") || "";
   core.info("dockerhubNamespace: " + dockerhubNamespace);
   core.info("dockerHubUsername: " + dockerHubUsername);
   core.info("dockerhubNamespace: " + dockerhubNamespace);
+  core.info("stageDirectory: " + stageDirectory);
+  core.info("stageFilePrefix: " + stageFilePrefix);
+  core.info("stageFileSuffix: " + stageFileSuffix);
 
   try {
     /** Login to docker */
-    core.info(colors.yellow(`🔐 Logging into docker..`));
-    await execSync(
-      `echo "${dockerHubPassword}" | docker login --username ${dockerHubUsername} --password-stdin`,
-      { stdio: "inherit" },
-    );
-    // await execSync("docker buildx create --use || true", {
-    //   stdio: "inherit",
-    // });
+    core.info(colors.yellow(`🔐 Logging into dockerhub..`));
+    const r = await fetch(`https://hub.docker.com/v2/users/login/`, {
+      body: JSON.stringify({
+        username: dockerHubUsername,
+        password: dockerHubPassword,
+      }),
+    });
+    const token = (await r.json()).token;
+    core.info("token: " + token);
 
     for (const pkg of packages) {
       if (!pkg.isDockerApp) continue;
-      // const pkgDir = path.join(rootDir, pkg.directory);
-      // const buildDir = path.join(pkgDir, pkg.buildDir || "./");
-      //
-      // /** Read package.json */
-      // const pkgJson = JSON.parse(
-      //   fs.readFileSync(path.join(buildDir, "package.json"), "utf-8"),
-      // );
-      //
-      // const imageName = sanitizePackageName(pkgJson.name);
-      // const fullImageName = `${dockerHubUsername}/${imageName}`;
-      //
+
+      core.info(`🧪 Updating stage file for ` + colors.magenta(pkg.name));
+      const imageName = sanitizePackageName(pkg.name);
+      const stageFile = `${dockerhubNamespace}/${stageFilePrefix}${imageName}${stageFileSuffix}`;
+      const imageUrl = `${dockerhubNamespace}/${imageName}:${pkg.version}`;
+      core.info("stageFile: " + stageFile);
+      core.info("imageUrl: " + imageUrl);
+
       // /** Publish package */
       // core.info(
       //   `🧪 Building docker image ` +
@@ -64,16 +67,16 @@ async function run() {
     core.setFailed(error);
   }
 }
-//
-// function sanitizePackageName(name, replacement = "-") {
-//   return (
-//     name
-//       // eslint-disable-next-line no-control-regex
-//       .replace(/[<>:"/\\|?*\x00-\x1F]/g, replacement)
-//       .replace(/[@]/g, "")
-//       .trim()
-//   );
-// }
+
+function sanitizePackageName(name, replacement = "-") {
+  return (
+    name
+      // eslint-disable-next-line no-control-regex
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, replacement)
+      .replace(/[@]/g, "")
+      .trim()
+  );
+}
 
 run().catch((error) => {
   core.setFailed(error);
