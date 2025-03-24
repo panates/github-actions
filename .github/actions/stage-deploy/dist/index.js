@@ -27311,6 +27311,7 @@ var require_dist = __commonJS({
 });
 
 // .github/actions/stage-deploy/src/index.mjs
+var import_node_child_process = require("node:child_process");
 var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
 var core = __toESM(require_core(), 1);
@@ -27330,15 +27331,12 @@ async function run() {
   const stageDirectory = core.getInput("stage-directory") || "";
   const stageFilePrefix = core.getInput("stage-file-prefix") || "";
   const stageFileSuffix = core.getInput("stage-file-suffix") || "";
-  core.info("dockerhubNamespace: " + dockerhubNamespace);
-  core.info("dockerHubUsername: " + dockerHubUsername);
-  core.info("dockerhubNamespace: " + dockerhubNamespace);
   core.info("stageDirectory: " + stageDirectory);
   core.info("stageFilePrefix: " + stageFilePrefix);
   core.info("stageFileSuffix: " + stageFileSuffix);
   try {
     core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into dockerhub..`));
-    const r = await fetch(`https://hub.docker.com/v2/users/login/`, {
+    let r = await fetch(`https://hub.docker.com/v2/users/login/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -27354,10 +27352,10 @@ async function run() {
       return;
     }
     const { token } = await r.json();
-    core.info("token: " + token);
+    const failItems = [];
+    const okItems = [];
     for (const pkg of packages) {
       if (!pkg.isDockerApp) continue;
-      core.info(`\u{1F9EA} Updating stage file for ` + import_ansi_colors.default.magenta(pkg.name));
       const imageName = sanitizePackageName(pkg.name);
       const stageFile = import_node_path.default.join(
         stageDirectory || "./",
@@ -27366,18 +27364,63 @@ async function run() {
       const imageUrl = `${dockerhubNamespace}/${imageName}:${pkg.version}`;
       core.info("stageFile: " + stageFile);
       core.info("imageUrl: " + imageUrl);
+      core.info(import_ansi_colors.default.yellow(`\u{1F50D} Checking if image exists in DockerHub..`));
+      r = await fetch(
+        `https://hub.docker.com/v2/repositories/${dockerhubNamespace}/${imageName}/tags/${pkg.version}/`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: "JWT " + token
+          }
+        }
+      );
+      if (!r.ok) {
+        const errorText = await r.text();
+        core.setFailed(`${r.status} - ${errorText}`);
+        failItems.push(pkg.name);
+        continue;
+      }
+      core.info(
+        import_ansi_colors.default.yellow(`\u{1F9EA} Updating stage file for `) + import_ansi_colors.default.magenta(pkg.name)
+      );
       const stageFileContent = import_node_fs.default.readFileSync(stageFile, "utf-8");
-      core.info("stageFileContent: \n" + stageFileContent);
       const doc = import_yaml.default.parseDocument(stageFileContent);
+      let updated = false;
       import_yaml.default.visit(doc, {
         Pair(_, pair) {
           if (String(pair.key) === "image" && String(pair.value).startsWith(dockerhubNamespace + "/")) {
+            updated = true;
             pair.value = imageUrl;
           }
         }
       });
-      core.info("stageFileContent: \n" + String(doc));
+      if (updated) okItems.push(pkg.name);
+      else failItems.push(pkg.name);
+      import_node_fs.default.writeFileSync(stageFile, doc.toString());
     }
+    if (failItems.length > 0) {
+      core.setFailed(`Failed to update stage file for ${failItems.join(", ")}`);
+      return;
+    }
+    core.info("Committing and pushing changes..");
+    (0, import_node_child_process.execSync)("git config --global user.name 'GitHub Actions'", {
+      stdio: "inherit"
+    });
+    (0, import_node_child_process.execSync)("git config --global user.email 'actions@github.com'", {
+      stdio: "inherit"
+    });
+    (0, import_node_child_process.execSync)("git add .", {
+      stdio: "inherit"
+    });
+    (0, import_node_child_process.execSync)(
+      `git diff --staged --quiet || git commit -m "Updated stage files (${okItems.join(", ")})"`,
+      {
+        stdio: "inherit"
+      }
+    );
+    (0, import_node_child_process.execSync)("git push", {
+      stdio: "inherit"
+    });
   } catch (error) {
     core.setFailed(error);
   }

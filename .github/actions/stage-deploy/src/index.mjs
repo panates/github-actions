@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import * as core from "@actions/core";
@@ -7,7 +8,6 @@ import yaml from "yaml";
 async function run() {
   /** Read packages inputs */
   const packages = JSON.parse(core.getInput("packages", { required: true }));
-  // const token = core.getInput("token", { required: true });
   const dockerHubUsername = core.getInput("docherhub-username", {
     required: true,
   });
@@ -20,9 +20,6 @@ async function run() {
   const stageDirectory = core.getInput("stage-directory") || "";
   const stageFilePrefix = core.getInput("stage-file-prefix") || "";
   const stageFileSuffix = core.getInput("stage-file-suffix") || "";
-  core.info("dockerhubNamespace: " + dockerhubNamespace);
-  core.info("dockerHubUsername: " + dockerHubUsername);
-  core.info("dockerhubNamespace: " + dockerhubNamespace);
   core.info("stageDirectory: " + stageDirectory);
   core.info("stageFilePrefix: " + stageFilePrefix);
   core.info("stageFileSuffix: " + stageFileSuffix);
@@ -30,7 +27,7 @@ async function run() {
   try {
     /** Login to docker */
     core.info(colors.yellow(`🔐 Logging into dockerhub..`));
-    const r = await fetch(`https://hub.docker.com/v2/users/login/`, {
+    let r = await fetch(`https://hub.docker.com/v2/users/login/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -47,12 +44,13 @@ async function run() {
     }
 
     const { token } = await r.json();
-    core.info("token: " + token);
+
+    const failItems = [];
+    const okItems = [];
 
     for (const pkg of packages) {
       if (!pkg.isDockerApp) continue;
 
-      core.info(`🧪 Updating stage file for ` + colors.magenta(pkg.name));
       const imageName = sanitizePackageName(pkg.name);
       const stageFile = path.join(
         stageDirectory || "./",
@@ -62,10 +60,29 @@ async function run() {
       core.info("stageFile: " + stageFile);
       core.info("imageUrl: " + imageUrl);
 
-      const stageFileContent = fs.readFileSync(stageFile, "utf-8");
-      core.info("stageFileContent: \n" + stageFileContent);
+      core.info(colors.yellow(`🔍 Checking if image exists in DockerHub..`));
+      r = await fetch(
+        `https://hub.docker.com/v2/repositories/${dockerhubNamespace}/${imageName}/tags/${pkg.version}/`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: "JWT " + token,
+          },
+        },
+      );
+      if (!r.ok) {
+        const errorText = await r.text();
+        core.setFailed(`${r.status} - ${errorText}`);
+        failItems.push(pkg.name);
+        continue;
+      }
 
+      core.info(
+        colors.yellow(`🧪 Updating stage file for `) + colors.magenta(pkg.name),
+      );
+      const stageFileContent = fs.readFileSync(stageFile, "utf-8");
       const doc = yaml.parseDocument(stageFileContent);
+      let updated = false;
       // Traverse & update
       yaml.visit(doc, {
         Pair(_, pair) {
@@ -73,30 +90,39 @@ async function run() {
             String(pair.key) === "image" &&
             String(pair.value).startsWith(dockerhubNamespace + "/")
           ) {
+            updated = true;
             pair.value = imageUrl;
           }
         },
       });
+      if (updated) okItems.push(pkg.name);
+      else failItems.push(pkg.name);
 
-      core.info("stageFileContent: \n" + String(doc));
-
-      // /** Publish package */
-      // core.info(
-      //   `🧪 Building docker image ` +
-      //     colors.magenta(fullImageName + ":" + pkgJson.version),
-      // );
-      // await execSync(
-      //   `docker buildx build --platform ${dockerPlatforms}` +
-      //     ` --build-arg GITHUB_TOKEN=${token} ` +
-      //     ` -t  ${fullImageName}:${pkgJson.version}` +
-      //     ` -t  ${fullImageName}:latest` +
-      //     " --push .",
-      //   {
-      //     cwd: pkgDir,
-      //     stdio: "inherit",
-      //   },
-      // );
+      fs.writeFileSync(stageFile, doc.toString());
     }
+    if (failItems.length > 0) {
+      core.setFailed(`Failed to update stage file for ${failItems.join(", ")}`);
+      return;
+    }
+    core.info("Committing and pushing changes..");
+    execSync("git config --global user.name 'GitHub Actions'", {
+      stdio: "inherit",
+    });
+    execSync("git config --global user.email 'actions@github.com'", {
+      stdio: "inherit",
+    });
+    execSync("git add .", {
+      stdio: "inherit",
+    });
+    execSync(
+      `git diff --staged --quiet || git commit -m "Updated stage files (${okItems.join(", ")})"`,
+      {
+        stdio: "inherit",
+      },
+    );
+    execSync("git push", {
+      stdio: "inherit",
+    });
   } catch (error) {
     core.setFailed(error);
   }
