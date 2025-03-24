@@ -1,7 +1,7 @@
-import fs from "node:fs";
-import path from "node:path";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
+import fs from "fs";
+import path from "path";
 
 async function run() {
   /** Read packages inputs */
