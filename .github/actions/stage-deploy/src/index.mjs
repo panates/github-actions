@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
 
@@ -29,12 +31,21 @@ async function run() {
     core.info(colors.yellow(`🔐 Logging into dockerhub..`));
     const r = await fetch(`https://hub.docker.com/v2/users/login/`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         username: dockerHubUsername,
         password: dockerHubPassword,
       }),
     });
-    const token = (await r.json()).token;
+    if (!r.ok) {
+      const errorText = await r.text();
+      core.setFailed(`Docker login failed: ${r.status} - ${errorText}`);
+      return;
+    }
+
+    const { token } = await r.json();
     core.info("token: " + token);
 
     for (const pkg of packages) {
@@ -42,10 +53,15 @@ async function run() {
 
       core.info(`🧪 Updating stage file for ` + colors.magenta(pkg.name));
       const imageName = sanitizePackageName(pkg.name);
-      const stageFile = `${dockerhubNamespace}/${stageFilePrefix}${imageName}${stageFileSuffix}`;
+      const stageFile = path.join(
+        stageDirectory || "./",
+      )`${stageFilePrefix}${imageName}${stageFileSuffix}`;
       const imageUrl = `${dockerhubNamespace}/${imageName}:${pkg.version}`;
       core.info("stageFile: " + stageFile);
       core.info("imageUrl: " + imageUrl);
+
+      const stageFileContent = fs.readFileSync(stageFile, "utf-8");
+      core.info("stageFileContent: \n" + stageFileContent);
 
       // /** Publish package */
       // core.info(
