@@ -20047,7 +20047,7 @@ var import_ansi_colors = __toESM(require_ansi_colors(), 1);
 async function run() {
   const packages = JSON.parse(core.getInput("packages", { required: true }));
   const token = core.getInput("token", { required: true });
-  const rootDir = core.getInput("workspace", { required: true }) || process.cwd();
+  const rootDir = core.getInput("workspace") || process.cwd();
   const dockerHubUsername = core.getInput("docherhub-username", {
     required: true
   });

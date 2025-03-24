@@ -20093,7 +20093,7 @@ function setNpmrcValue(key, value, options) {
 async function run() {
   const packages = JSON.parse(core2.getInput("packages", { required: true }));
   const token = core2.getInput("token", { required: true });
-  const rootDir = core2.getInput("workspace", { required: true }) || process.cwd();
+  const rootDir = core2.getInput("workspace") || process.cwd();
   try {
     for (const pkg of packages) {
       const pkgDir = import_node_path2.default.join(rootDir, pkg.directory);

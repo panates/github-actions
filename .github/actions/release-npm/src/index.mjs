@@ -10,8 +10,7 @@ async function run() {
   /** Read packages inputs */
   const packages = JSON.parse(core.getInput("packages", { required: true }));
   const token = core.getInput("token", { required: true });
-  const rootDir =
-    core.getInput("workspace", { required: true }) || process.cwd();
+  const rootDir = core.getInput("workspace") || process.cwd();
 
   try {
     for (const pkg of packages) {

@@ -8,7 +8,7 @@ inputs:
     required: true
   workspace:
     description: "The default working directory on the runner for steps, and the default location of your repository when using the checkout action"
-    default: ${{github.workspace}}
+    default: ${{ github.workspace }}
   platforms:
     description: "Comma seperated target platforms for Docker images. Default linux/amd64"
     default: 'linux/amd64'
