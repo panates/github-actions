@@ -54,8 +54,7 @@ jobs:
     name: "Release"
     runs-on: ubuntu-latest
     outputs:
-      packages:
-        value: ${{ steps.environment.outputs.packages }}
+      packages: ${{ steps.environment.outputs.packages }}
 
     steps:
       - name: "Setup Environment"
