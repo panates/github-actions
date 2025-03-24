@@ -80,26 +80,26 @@ jobs:
           prerelease: false
           replacesArtifacts: true
 
-#      - name: "Build Packages"
-#        shell: bash
-#        run: |
-#          ${{ inputs.build_script }}
+      - name: "Build Packages"
+        shell: bash
+        run: |
+          ${{ inputs.build_script }}
 
-#      - name: "Publish Npm Packages"
-#        if: ${{ steps.environment.outputs.npmPackages && inputs.npm-publish == 'true'}}
-#        uses: panates/github-actions/.github/actions/release-npm@dev
-#        with:
-#          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-#          workspace: ${{ inputs.workspace }}
-#          packages: ${{ steps.environment.outputs.packages }}
-#
-#      - name: "Build Docker Images"
-#        if: ${{  steps.environment.outputs.dockerPackages && inputs.dockerize == 'true'}}
-#        uses: panates/github-actions/.github/actions/release-docker@dev
-#        with:
-#          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-#          workspace: ${{ inputs.workspace }}
-#          packages: ${{ steps.environment.outputs.packages }}
-#          platforms: ${{ inputs.docker-platforms }}
-#          docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          docherhub-password: ${{ secrets.DOCKERHUB_PASS }}
+      - name: "Publish Npm Packages"
+        if: ${{ steps.environment.outputs.npmPackages && inputs.npm-publish == 'true'}}
+        uses: panates/github-actions/.github/actions/release-npm@dev
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          workspace: ${{ inputs.workspace }}
+          packages: ${{ steps.environment.outputs.packages }}
+
+      - name: "Build Docker Images"
+        if: ${{  steps.environment.outputs.dockerPackages && inputs.dockerize == 'true'}}
+        uses: panates/github-actions/.github/actions/release-docker@dev
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          workspace: ${{ inputs.workspace }}
+          packages: ${{ steps.environment.outputs.packages }}
+          platforms: ${{ inputs.docker-platforms }}
+          docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
+          docherhub-password: ${{ secrets.DOCKERHUB_PASS }}
