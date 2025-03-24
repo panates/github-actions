@@ -14,6 +14,7 @@ async function run() {
 
   try {
     for (const pkg of packages) {
+      if (!pkg.isNpmPackage) continue;
       const pkgDir = path.join(rootDir, pkg.directory);
       const buildDir = path.join(pkgDir, pkg.buildDir || "./");
       if (!fs.existsSync(buildDir)) {

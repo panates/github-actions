@@ -20096,6 +20096,7 @@ async function run() {
   const rootDir = core2.getInput("workspace") || process.cwd();
   try {
     for (const pkg of packages) {
+      if (!pkg.isNpmPackage) continue;
       const pkgDir = import_node_path2.default.join(rootDir, pkg.directory);
       const buildDir = import_node_path2.default.join(pkgDir, pkg.buildDir || "./");
       if (!import_node_fs2.default.existsSync(buildDir)) {

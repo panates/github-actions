@@ -30,6 +30,7 @@ async function run() {
     });
 
     for (const pkg of packages) {
+      if (!pkg.isDockerApp) continue;
       const pkgDir = path.join(rootDir, pkg.directory);
       const buildDir = path.join(pkgDir, pkg.buildDir || "./");
 

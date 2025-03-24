@@ -20066,6 +20066,7 @@ async function run() {
       stdio: "inherit"
     });
     for (const pkg of packages) {
+      if (!pkg.isDockerApp) continue;
       const pkgDir = import_node_path.default.join(rootDir, pkg.directory);
       const buildDir = import_node_path.default.join(pkgDir, pkg.buildDir || "./");
       const pkgJson = JSON.parse(
