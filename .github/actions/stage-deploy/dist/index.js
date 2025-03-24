@@ -20039,10 +20039,10 @@ var require_ansi_colors = __commonJS({
 });
 
 // .github/actions/stage-deploy/src/index.mjs
+var import_node_fs = __toESM(require("node:fs"), 1);
+var import_node_path = __toESM(require("node:path"), 1);
 var core = __toESM(require_core(), 1);
 var import_ansi_colors = __toESM(require_ansi_colors(), 1);
-var import_fs = __toESM(require("fs"), 1);
-var import_path = __toESM(require("path"), 1);
 async function run() {
   const packages = JSON.parse(core.getInput("packages", { required: true }));
   const dockerHubUsername = core.getInput("docherhub-username", {
@@ -20086,13 +20086,14 @@ async function run() {
       if (!pkg.isDockerApp) continue;
       core.info(`\u{1F9EA} Updating stage file for ` + import_ansi_colors.default.magenta(pkg.name));
       const imageName = sanitizePackageName(pkg.name);
-      const stageFile = import_path.default.join(
-        stageDirectory || "./"
-      )`${stageFilePrefix}${imageName}${stageFileSuffix}`;
+      const stageFile = import_node_path.default.join(
+        stageDirectory || "./",
+        `${stageFilePrefix}${imageName}${stageFileSuffix}`
+      );
       const imageUrl = `${dockerhubNamespace}/${imageName}:${pkg.version}`;
       core.info("stageFile: " + stageFile);
       core.info("imageUrl: " + imageUrl);
-      const stageFileContent = import_fs.default.readFileSync(stageFile, "utf-8");
+      const stageFileContent = import_node_fs.default.readFileSync(stageFile, "utf-8");
       core.info("stageFileContent: \n" + stageFileContent);
     }
   } catch (error) {

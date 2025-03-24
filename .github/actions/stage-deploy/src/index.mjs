@@ -1,7 +1,7 @@
+import fs from "node:fs";
+import path from "node:path";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
-import fs from "fs";
-import path from "path";
 
 async function run() {
   /** Read packages inputs */
@@ -55,7 +55,8 @@ async function run() {
       const imageName = sanitizePackageName(pkg.name);
       const stageFile = path.join(
         stageDirectory || "./",
-      )`${stageFilePrefix}${imageName}${stageFileSuffix}`;
+        `${stageFilePrefix}${imageName}${stageFileSuffix}`,
+      );
       const imageUrl = `${dockerhubNamespace}/${imageName}:${pkg.version}`;
       core.info("stageFile: " + stageFile);
       core.info("imageUrl: " + imageUrl);
