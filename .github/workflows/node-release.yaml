@@ -136,15 +136,14 @@ jobs:
           ref: ${{ inputs.stage-repository-branch }}
 
       - name: Update image in deployment yaml
-        uses: panates/github-actions/.github/actions/stage-deploy@v1
+        uses: panates/github-actions/.github/actions/stage-deploy@main
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           packages: ${{ needs.release.outputs.packages }}
           dockerhub-namespace: ${{ secrets.DOCKERHUB_NAMESPACE }}
           docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
           docherhub-password: ${{ secrets.DOCKERHUB_PASS }}
-          stage-directory: ${{ inputs.stage-directory }}
-          stage-file-prefix: ${{ inputs.stage-file-prefix }}
-          stage-file-suffix: ${{ inputs.stage-file-suffix }}
+          stage-files: ${{ inputs.stage-files }}
+          image-files: ${{ inputs.image-files }}
 
 
