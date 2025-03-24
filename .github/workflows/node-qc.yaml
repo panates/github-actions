@@ -1,6 +1,11 @@
 name: Quality Check
 on:
   workflow_call:
+    inputs:
+      qc_script:
+        type: string
+        description: "QC script to be executed"
+        default: 'npm run qc'
     secrets:
       PERSONAL_ACCESS_TOKEN:
         description: "Github personal access token"
@@ -30,5 +35,4 @@ jobs:
           npm install --only=dev --no-save
 
       - name: Run QC Tests
-        run: |
-          npm run qc          
+        run: ${{ inputs.qc_script }}
