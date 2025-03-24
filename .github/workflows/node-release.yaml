@@ -36,8 +36,6 @@ jobs:
   release:
     name: "Release"
     runs-on: ubuntu-latest
-    outputs:
-      lastTag: ${{ steps.environment.outputs.lastTag }}
 
     steps:
       - name: "Setup Environment"
@@ -75,7 +73,7 @@ jobs:
         id: create_release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ steps.environment.lastTag }}
+          tag: ${{ steps.environment.outputs.lastTag }}
           body: ${{ steps.changelog.outputs.changelog }}
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           draft: false
