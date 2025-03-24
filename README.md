@@ -9,9 +9,9 @@ This Repository contains reusable workflows for GitHub Actions.
   [node-qc.yaml](./docs/node-qc.md)
 
 
-- NodeJS Build Workflow
+- NodeJS Release Workflow
 
-  [node-build.yaml](./docs/node-build.md)
+  [node-release.yaml](./docs/node-release.md)
 
 
 - Sonar Analysis Workflow

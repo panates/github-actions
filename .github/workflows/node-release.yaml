@@ -59,7 +59,7 @@ jobs:
 
       - name: "Build Changelog"
         id: changelog
-        uses: panates/github-actions/.github/actions/node-build-changelog@dev
+        uses: panates/github-actions/.github/actions/node-build-changelog@v1
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           fromTag: ${{ steps.environment.outputs.prevSha }}
@@ -87,7 +87,7 @@ jobs:
 
       - name: "Publish Npm Packages"
         if: ${{ steps.environment.outputs.npmPackages && inputs.npm-publish == 'true'}}
-        uses: panates/github-actions/.github/actions/release-npm@dev
+        uses: panates/github-actions/.github/actions/release-npm@v1
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           workspace: ${{ inputs.workspace }}
@@ -95,7 +95,7 @@ jobs:
 
       - name: "Build Docker Images"
         if: ${{  steps.environment.outputs.dockerPackages && inputs.dockerize == 'true'}}
-        uses: panates/github-actions/.github/actions/release-docker@dev
+        uses: panates/github-actions/.github/actions/release-docker@v1
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           workspace: ${{ inputs.workspace }}
