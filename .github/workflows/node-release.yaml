@@ -71,6 +71,17 @@ jobs:
         run: |
           cat COMMIT_CHANGELOG.md
 
+      - name: Create GitHub Release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.environment.lastTag }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          draft: false
+          prerelease: false
+          replacesArtifacts: true
+
       - name: "Build Packages"
         shell: bash
         run: |
@@ -84,43 +95,13 @@ jobs:
           workspace: ${{ inputs.workspace }}
           packages: ${{ steps.environment.outputs.packages }}
 
-      - name: "Publish Npm Packages"
+      - name: "Build Docker Images"
         if: ${{  steps.environment.outputs.dockerPackages && inputs.dockerize == 'true'}}
         uses: panates/github-actions/.github/actions/release-docker@dev
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           workspace: ${{ inputs.workspace }}
           packages: ${{ steps.environment.outputs.packages }}
-          docker-platforms: ${{ inputs.docker-platforms }}
+          platforms: ${{ inputs.docker-platforms }}
           docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
           docherhub-password: ${{ secrets.DOCKERHUB_PASS }}
-
-#  # ***********************************
-#  # Job: Create GitHub release
-#  # ***********************************
-#  github_release:
-#    name: 'Create Github Release'
-#    needs:
-#      - build
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Download artifacts
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: 'artifacts'
-#          path: './__artifacts__'
-#
-#      - name: "Create ZIP files"
-#        uses: panates/github-actions/.github/actions/github-release-artifacts@dev
-#
-#      - name: Create GitHub Release
-#        id: create_release
-#        uses: ncipollo/release-action@v1
-#        with:
-#          tag: ${{ needs.build.outputs.lastTag }}
-#          bodyFile: "__artifacts__/COMMIT_CHANGELOG.md"
-#          artifacts: "__release__/**/*"
-#          token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
-#          draft: false
-#          prerelease: false
-#          replacesArtifacts: true
