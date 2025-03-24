@@ -1,6 +1,5 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
-import path from "node:path";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
 import yaml from "yaml";
@@ -17,12 +16,30 @@ async function run() {
   const dockerhubNamespace = core.getInput("dockerhub-namespace", {
     required: true,
   });
-  const stageDirectory = core.getInput("stage-directory") || "";
-  const stageFilePrefix = core.getInput("stage-file-prefix") || "";
-  const stageFileSuffix = core.getInput("stage-file-suffix") || "";
-  core.info("stageDirectory: " + stageDirectory);
-  core.info("stageFilePrefix: " + stageFilePrefix);
-  core.info("stageFileSuffix: " + stageFileSuffix);
+  const stageFilesMap = core
+    .getInput("stage-files", {
+      required: true,
+    })
+    .trim()
+    .split(/\s*\n\s*/)
+    .reduce((acc, item) => {
+      const a = item.split(/\s*=\s*/);
+      acc[a[0]] = a[1];
+      return acc;
+    }, {});
+  const imageFilesMap = core
+    .getInput("image-files", {
+      required: true,
+    })
+    .trim()
+    .split(/\s*\n\s*/)
+    .reduce((acc, item) => {
+      const a = item.split(/\s*=\s*/);
+      acc[a[0]] = a[1];
+      return acc;
+    }, {});
+  core.info("stageFiles: " + JSON.stringify(stageFilesMap));
+  core.info("imageFiles: " + JSON.stringify(imageFilesMap));
 
   try {
     /** Login to docker */
@@ -45,17 +62,22 @@ async function run() {
 
     const { token } = await r.json();
 
-    const failItems = [];
     const okItems = [];
 
     for (const pkg of packages) {
       if (!pkg.isDockerApp) continue;
 
-      const imageName = sanitizePackageName(pkg.name);
-      const stageFile = path.join(
-        stageDirectory || "./",
-        `${stageFilePrefix}${imageName}${stageFileSuffix}`,
-      );
+      const imageName = imageFilesMap[pkg.name];
+      if (!imageName) {
+        core.setFailed(`No image file mapping found for ${pkg.name}`);
+        continue;
+      }
+      const stageFile = stageFilesMap[pkg.name];
+      if (!stageFile) {
+        core.setFailed(`No stage file mapping found for ${pkg.name}`);
+        continue;
+      }
+
       const imageUrl = `${dockerhubNamespace}/${imageName}:${pkg.version}`;
       core.info("stageFile: " + stageFile);
       core.info("imageUrl: " + imageUrl);
@@ -73,7 +95,6 @@ async function run() {
       if (!r.ok) {
         const errorText = await r.text();
         core.setFailed(`${r.status} - ${errorText}`);
-        failItems.push(pkg.name);
         continue;
       }
 
@@ -96,12 +117,16 @@ async function run() {
         },
       });
       if (updated) okItems.push(pkg.name);
-      else failItems.push(pkg.name);
+      else {
+        core.setFailed(
+          '"image" key with dockerhub namespace not found in ' + stageFile,
+        );
+        continue;
+      }
 
       fs.writeFileSync(stageFile, doc.toString());
     }
-    if (failItems.length > 0) {
-      core.setFailed(`Failed to update stage file for ${failItems.join(", ")}`);
+    if (process.exitCode) {
       return;
     }
     core.info("Committing and pushing changes..");
@@ -126,16 +151,6 @@ async function run() {
   } catch (error) {
     core.setFailed(error);
   }
-}
-
-function sanitizePackageName(name, replacement = "-") {
-  return (
-    name
-      // eslint-disable-next-line no-control-regex
-      .replace(/[<>:"/\\|?*\x00-\x1F]/g, replacement)
-      .replace(/[@]/g, "")
-      .trim()
-  );
 }
 
 run().catch((error) => {

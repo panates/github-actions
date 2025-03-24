@@ -16,14 +16,11 @@ inputs:
     description: "Dockerhub namespace"
     type: string
     required: true
-  stage-directory:
-    description: "Stage directory"
+  stage-files:
+    description: "<cr> delimited pairing of <Package name=Stage file name>"
     type: string
-  stage-file-prefix:
-    description: "Stage file prefix"
-    type: string
-  stage-file-suffix:
-    description: "Stage file prefix"
+  image-files:
+    description: "<cr> delimited pairing of <Package name=Image file name>"
     type: string
 runs:
   using: "node20"
