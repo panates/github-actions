@@ -27327,22 +27327,24 @@ async function run() {
   const dockerhubNamespace = core.getInput("dockerhub-namespace", {
     required: true
   });
+  core.info("stageFiles:");
   const stageFilesMap = core.getInput("stage-files", {
     required: true
   }).trim().split(/\s*\n\s*/).reduce((acc, item) => {
     const a = item.split(/\s*=\s*/);
     acc[a[0]] = a[1];
+    core.info("  " + import_ansi_colors.default.yellow(a[0]) + " = " + import_ansi_colors.default.magenta(a[1]));
     return acc;
   }, {});
+  core.info("imageFiles");
   const imageFilesMap = core.getInput("image-files", {
     required: true
   }).trim().split(/\s*\n\s*/).reduce((acc, item) => {
     const a = item.split(/\s*=\s*/);
     acc[a[0]] = a[1];
+    core.info("  " + import_ansi_colors.default.yellow(a[0]) + " = " + import_ansi_colors.default.magenta(a[1]));
     return acc;
   }, {});
-  core.info("stageFiles: " + JSON.stringify(stageFilesMap));
-  core.info("imageFiles: " + JSON.stringify(imageFilesMap));
   try {
     core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into dockerhub..`));
     let r = await fetch(`https://hub.docker.com/v2/users/login/`, {
@@ -27388,8 +27390,12 @@ async function run() {
         }
       );
       if (!r.ok) {
-        const errorText = await r.text();
-        core.setFailed(`${r.status} - ${errorText}`);
+        if (r.status === 404) {
+          core.setFailed(`Image ${imageUrl} not found in DockerHub`);
+        } else {
+          const errorText = await r.text();
+          core.setFailed(`${r.status} - ${errorText}`);
+        }
         continue;
       }
       core.info(

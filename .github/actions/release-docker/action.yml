@@ -19,6 +19,14 @@ inputs:
   docherhub-password:
     description: "DockerHub password"
     required: true
+  dockerhub-namespace:
+    description: "Dockerhub namespace"
+    type: string
+    required: true
+  image-files:
+    description: "<cr> delimited pairing of <Package name=Image file name>"
+    type: string
+    required: true
 
 runs:
   using: "node20"

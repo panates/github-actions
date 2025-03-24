@@ -15,7 +15,24 @@ async function run() {
   const dockerHubPassword = core.getInput("docherhub-password", {
     required: true,
   });
+  const dockerhubNamespace = core.getInput("dockerhub-namespace", {
+    required: true,
+  });
   const dockerPlatforms = core.getInput("platforms", { required: true });
+
+  core.info("imageFiles");
+  const imageFilesMap = core
+    .getInput("image-files", {
+      required: true,
+    })
+    .trim()
+    .split(/\s*\n\s*/)
+    .reduce((acc, item) => {
+      const a = item.split(/\s*=\s*/);
+      acc[a[0]] = a[1];
+      core.info("  " + colors.yellow(a[0]) + " = " + colors.magenta(a[1]));
+      return acc;
+    }, {});
 
   try {
     /** Login to docker */
@@ -29,6 +46,15 @@ async function run() {
       stdio: "inherit",
     });
 
+    /** Validate image files mapping */
+    for (const pkg of packages) {
+      if (!pkg.isDockerApp) continue;
+      if (!imageFilesMap[pkg.name]) {
+        core.setFailed(`No image file mapping found for ${pkg.name}`);
+        return;
+      }
+    }
+
     for (const pkg of packages) {
       if (!pkg.isDockerApp) continue;
       const pkgDir = path.join(rootDir, pkg.directory);
@@ -39,8 +65,8 @@ async function run() {
         fs.readFileSync(path.join(buildDir, "package.json"), "utf-8"),
       );
 
-      const imageName = sanitizePackageName(pkgJson.name);
-      const fullImageName = `${dockerHubUsername}/${imageName}`;
+      const imageName = imageFilesMap[pkg.name];
+      const fullImageName = `${dockerhubNamespace}/${imageName}`;
 
       /** Publish package */
       core.info(
@@ -62,16 +88,6 @@ async function run() {
   } catch (error) {
     core.setFailed(error);
   }
-}
-
-function sanitizePackageName(name, replacement = "-") {
-  return (
-    name
-      // eslint-disable-next-line no-control-regex
-      .replace(/[<>:"/\\|?*\x00-\x1F]/g, replacement)
-      .replace(/[@]/g, "")
-      .trim()
-  );
 }
 
 run().catch((error) => {

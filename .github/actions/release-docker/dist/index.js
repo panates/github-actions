@@ -20054,7 +20054,19 @@ async function run() {
   const dockerHubPassword = core.getInput("docherhub-password", {
     required: true
   });
+  const dockerhubNamespace = core.getInput("dockerhub-namespace", {
+    required: true
+  });
   const dockerPlatforms = core.getInput("platforms", { required: true });
+  core.info("imageFiles");
+  const imageFilesMap = core.getInput("image-files", {
+    required: true
+  }).trim().split(/\s*\n\s*/).reduce((acc, item) => {
+    const a = item.split(/\s*=\s*/);
+    acc[a[0]] = a[1];
+    core.info("  " + import_ansi_colors.default.yellow(a[0]) + " = " + import_ansi_colors.default.magenta(a[1]));
+    return acc;
+  }, {});
   try {
     core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into docker..`));
     await (0, import_node_child_process.execSync)(
@@ -20067,13 +20079,20 @@ async function run() {
     });
     for (const pkg of packages) {
       if (!pkg.isDockerApp) continue;
+      if (!imageFilesMap[pkg.name]) {
+        core.setFailed(`No image file mapping found for ${pkg.name}`);
+        return;
+      }
+    }
+    for (const pkg of packages) {
+      if (!pkg.isDockerApp) continue;
       const pkgDir = import_node_path.default.join(rootDir, pkg.directory);
       const buildDir = import_node_path.default.join(pkgDir, pkg.buildDir || "./");
       const pkgJson = JSON.parse(
         import_node_fs.default.readFileSync(import_node_path.default.join(buildDir, "package.json"), "utf-8")
       );
-      const imageName = sanitizePackageName(pkgJson.name);
-      const fullImageName = `${dockerHubUsername}/${imageName}`;
+      const imageName = imageFilesMap[pkg.name];
+      const fullImageName = `${dockerhubNamespace}/${imageName}`;
       core.info(
         `\u{1F9EA} Building docker image ` + import_ansi_colors.default.magenta(fullImageName + ":" + pkgJson.version)
       );
@@ -20088,9 +20107,6 @@ async function run() {
   } catch (error) {
     core.setFailed(error);
   }
-}
-function sanitizePackageName(name, replacement = "-") {
-  return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, replacement).replace(/[@]/g, "").trim();
 }
 run().catch((error) => {
   core.setFailed(error);
