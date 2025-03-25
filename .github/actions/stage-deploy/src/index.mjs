@@ -7,6 +7,12 @@ import yaml from "yaml";
 async function run() {
   /** Read packages inputs */
   const packages = JSON.parse(core.getInput("packages", { required: true }));
+  const dockerPackages = packages.filter((p) => p.isDockerApp);
+  if (dockerPackages.length === 0) {
+    core.info("No docker packages found. Skipping");
+    return;
+  }
+
   const dockerHubUsername = core.getInput("docherhub-username", {
     required: true,
   });
@@ -66,9 +72,7 @@ async function run() {
 
     const okItems = [];
 
-    for (const pkg of packages) {
-      if (!pkg.isDockerApp) continue;
-
+    for (const pkg of dockerPackages) {
       const imageName = imageFilesMap[pkg.name];
       if (!imageName) {
         core.setFailed(`No image file mapping found for ${pkg.name}`);

@@ -9,12 +9,17 @@ import { setNpmrcValue } from "./npmrc-utils.js";
 async function run() {
   /** Read packages inputs */
   const packages = JSON.parse(core.getInput("packages", { required: true }));
+  const npmPackages = packages.filter((p) => p.isNpmPackage);
+  if (packages.length === 0) {
+    core.info("No npm packages found. Skipping");
+    return;
+  }
+
   const token = core.getInput("token", { required: true });
   const rootDir = core.getInput("workspace") || process.cwd();
 
   try {
-    for (const pkg of packages) {
-      if (!pkg.isNpmPackage) continue;
+    for (const pkg of npmPackages) {
       const pkgDir = path.join(rootDir, pkg.directory);
       const buildDir = path.join(pkgDir, pkg.buildDir || "./");
       if (!fs.existsSync(buildDir)) {

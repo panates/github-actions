@@ -20092,11 +20092,15 @@ function setNpmrcValue(key, value, options) {
 // .github/actions/release-npm/src/index.mjs
 async function run() {
   const packages = JSON.parse(core2.getInput("packages", { required: true }));
+  const npmPackages = packages.filter((p) => p.isNpmPackage);
+  if (packages.length === 0) {
+    core2.info("No npm packages found. Skipping");
+    return;
+  }
   const token = core2.getInput("token", { required: true });
   const rootDir = core2.getInput("workspace") || process.cwd();
   try {
-    for (const pkg of packages) {
-      if (!pkg.isNpmPackage) continue;
+    for (const pkg of npmPackages) {
       const pkgDir = import_node_path2.default.join(rootDir, pkg.directory);
       const buildDir = import_node_path2.default.join(pkgDir, pkg.buildDir || "./");
       if (!import_node_fs2.default.existsSync(buildDir)) {

@@ -7,6 +7,12 @@ import colors from "ansi-colors";
 async function run() {
   /** Read packages inputs */
   const packages = JSON.parse(core.getInput("packages", { required: true }));
+  const dockerPackages = packages.filter((p) => p.isDockerApp);
+  if (dockerPackages.length === 0) {
+    core.info("No docker packages found. Skipping");
+    return;
+  }
+
   const token = core.getInput("token", { required: true });
   const rootDir = core.getInput("workspace") || process.cwd();
   const dockerHubUsername = core.getInput("docherhub-username", {
@@ -47,16 +53,14 @@ async function run() {
     });
 
     /** Validate image files mapping */
-    for (const pkg of packages) {
-      if (!pkg.isDockerApp) continue;
+    for (const pkg of dockerPackages) {
       if (!imageFilesMap[pkg.name]) {
         core.setFailed(`No image file mapping found for ${pkg.name}`);
         return;
       }
     }
 
-    for (const pkg of packages) {
-      if (!pkg.isDockerApp) continue;
+    for (const pkg of dockerPackages) {
       const pkgDir = path.join(rootDir, pkg.directory);
       const buildDir = path.join(pkgDir, pkg.buildDir || "./");
 

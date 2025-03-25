@@ -20046,6 +20046,11 @@ var core = __toESM(require_core(), 1);
 var import_ansi_colors = __toESM(require_ansi_colors(), 1);
 async function run() {
   const packages = JSON.parse(core.getInput("packages", { required: true }));
+  const dockerPackages = packages.filter((p) => p.isDockerApp);
+  if (dockerPackages.length === 0) {
+    core.info("No docker packages found. Skipping");
+    return;
+  }
   const token = core.getInput("token", { required: true });
   const rootDir = core.getInput("workspace") || process.cwd();
   const dockerHubUsername = core.getInput("docherhub-username", {
@@ -20077,15 +20082,13 @@ async function run() {
     await (0, import_node_child_process.execSync)("docker buildx create --use || true", {
       stdio: "inherit"
     });
-    for (const pkg of packages) {
-      if (!pkg.isDockerApp) continue;
+    for (const pkg of dockerPackages) {
       if (!imageFilesMap[pkg.name]) {
         core.setFailed(`No image file mapping found for ${pkg.name}`);
         return;
       }
     }
-    for (const pkg of packages) {
-      if (!pkg.isDockerApp) continue;
+    for (const pkg of dockerPackages) {
       const pkgDir = import_node_path.default.join(rootDir, pkg.directory);
       const buildDir = import_node_path.default.join(pkgDir, pkg.buildDir || "./");
       const pkgJson = JSON.parse(
