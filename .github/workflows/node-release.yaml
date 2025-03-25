@@ -87,17 +87,6 @@ jobs:
         run: |
           cat COMMIT_CHANGELOG.md
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: ncipollo/release-action@v1
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          tag: ${{ steps.environment.outputs.lastTag }}
-          bodyFile:  "COMMIT_CHANGELOG.md"
-          draft: false
-          prerelease: false
-          replacesArtifacts: true
-
       - name: "Build Packages"
         shell: bash
         run: |
@@ -123,6 +112,17 @@ jobs:
           docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
           docherhub-password: ${{ secrets.DOCKERHUB_PASS }}
           image-files: ${{ inputs.image-files }}
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          tag: ${{ steps.environment.outputs.lastTag }}
+          bodyFile:  "COMMIT_CHANGELOG.md"
+          draft: false
+          prerelease: false
+          replacesArtifacts: true
 
   stage_deploy:
     if: ${{ inputs.stage-repository != '' }}
