@@ -68,7 +68,7 @@ async function run() {
       return;
     }
 
-    const { token } = await r.json();
+    const dockerHubToken = (await r.json()).token;
 
     const okItems = [];
 
@@ -94,7 +94,7 @@ async function run() {
         {
           method: "GET",
           headers: {
-            Authorization: "JWT " + token,
+            Authorization: "JWT " + dockerHubToken,
           },
         },
       );

@@ -41,12 +41,33 @@ async function run() {
     }, {});
 
   try {
-    /** Login to docker */
+    /** Login to docker in terminal */
     core.info(colors.yellow(`🔐 Logging into docker..`));
     await execSync(
       `echo "${dockerHubPassword}" | docker login --username ${dockerHubUsername} --password-stdin`,
       { stdio: "inherit" },
     );
+
+    /** Login to docker and get token */
+    core.info(colors.yellow(`🔐 Logging into dockerhub..`));
+    const r = await fetch(`https://hub.docker.com/v2/users/login/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: dockerHubUsername,
+        password: dockerHubPassword,
+      }),
+    });
+    if (!r.ok) {
+      const errorText = await r.text();
+      core.setFailed(`Docker login failed: ${r.status} - ${errorText}`);
+      return;
+    }
+
+    const dockerHubToken = (await r.json()).token;
+
     core.info(colors.yellow(`🔧 One-time setup if buildx isn’t initialized`));
     await execSync("docker buildx create --use || true", {
       stdio: "inherit",
@@ -88,6 +109,26 @@ async function run() {
           stdio: "inherit",
         },
       );
+
+      // 3. Update description
+      const readmeFile = path.join(pkgDir, "README.md");
+      if (fs.existsSync(readmeFile)) {
+        const readme = fs.readFileSync(readmeFile, "utf-8");
+        await fetch(
+          `https://hub.docker.com/v2/repositories/${fullImageName}/`,
+          {
+            method: "PATCH",
+            body: JSON.stringify({
+              description: pkgJson.description,
+              full_description: readme,
+            }),
+            headers: {
+              Authorization: "JWT " + dockerHubToken,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+      }
     }
   } catch (error) {
     core.setFailed(error);
