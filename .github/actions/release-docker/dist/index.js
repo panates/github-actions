@@ -13045,7 +13045,7 @@ var require_fetch = __commonJS({
         this.emit("terminated", error);
       }
     };
-    function fetch(input, init = {}) {
+    function fetch2(input, init = {}) {
       webidl.argumentLengthCheck(arguments, 1, { header: "globalThis.fetch" });
       const p = createDeferredPromise();
       let requestObject;
@@ -13975,7 +13975,7 @@ var require_fetch = __commonJS({
       }
     }
     module2.exports = {
-      fetch,
+      fetch: fetch2,
       Fetch,
       fetching,
       finalizeAndReportTiming
@@ -17231,7 +17231,7 @@ var require_undici = __commonJS({
     module2.exports.getGlobalDispatcher = getGlobalDispatcher;
     if (util.nodeMajor > 16 || util.nodeMajor === 16 && util.nodeMinor >= 8) {
       let fetchImpl = null;
-      module2.exports.fetch = async function fetch(resource) {
+      module2.exports.fetch = async function fetch2(resource) {
         if (!fetchImpl) {
           fetchImpl = require_fetch().fetch;
         }
@@ -20078,6 +20078,23 @@ async function run() {
       `echo "${dockerHubPassword}" | docker login --username ${dockerHubUsername} --password-stdin`,
       { stdio: "inherit" }
     );
+    core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into dockerhub..`));
+    const r = await fetch(`https://hub.docker.com/v2/users/login/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        username: dockerHubUsername,
+        password: dockerHubPassword
+      })
+    });
+    if (!r.ok) {
+      const errorText = await r.text();
+      core.setFailed(`Docker login failed: ${r.status} - ${errorText}`);
+      return;
+    }
+    const dockerHubToken = (await r.json()).token;
     core.info(import_ansi_colors.default.yellow(`\u{1F527} One-time setup if buildx isn\u2019t initialized`));
     await (0, import_node_child_process.execSync)("docker buildx create --use || true", {
       stdio: "inherit"
@@ -20106,6 +20123,24 @@ async function run() {
           stdio: "inherit"
         }
       );
+      const readmeFile = import_node_path.default.join(pkgDir, "README.md");
+      if (import_node_fs.default.existsSync(readmeFile)) {
+        const readme = import_node_fs.default.readFileSync(readmeFile, "utf-8");
+        await fetch(
+          `https://hub.docker.com/v2/repositories/${fullImageName}/`,
+          {
+            method: "PATCH",
+            body: JSON.stringify({
+              description: pkgJson.description,
+              full_description: readme
+            }),
+            headers: {
+              Authorization: "JWT " + dockerHubToken,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+      }
     }
   } catch (error) {
     core.setFailed(error);

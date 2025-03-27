@@ -27367,7 +27367,7 @@ async function run() {
       core.setFailed(`Docker login failed: ${r.status} - ${errorText}`);
       return;
     }
-    const { token } = await r.json();
+    const dockerHubToken = (await r.json()).token;
     const okItems = [];
     for (const pkg of dockerPackages) {
       const imageName = imageFilesMap[pkg.name];
@@ -27389,7 +27389,7 @@ async function run() {
         {
           method: "GET",
           headers: {
-            Authorization: "JWT " + token
+            Authorization: "JWT " + dockerHubToken
           }
         }
       );
