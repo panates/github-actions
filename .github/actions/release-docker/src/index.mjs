@@ -13,7 +13,7 @@ async function run() {
     return;
   }
 
-  // const token = core.getInput("token", { required: true });
+  const token = core.getInput("token", { required: true });
   const rootDir = core.getInput("workspace") || process.cwd();
   const dockerHubUsername = core.getInput("docherhub-username", {
     required: true,
@@ -24,7 +24,7 @@ async function run() {
   const dockerhubNamespace = core.getInput("dockerhub-namespace", {
     required: true,
   });
-  // const dockerPlatforms = core.getInput("platforms", { required: true });
+  const dockerPlatforms = core.getInput("platforms", { required: true });
 
   core.info("imageFiles");
   const imageFilesMap = core
@@ -98,21 +98,22 @@ async function run() {
         `🧪 Building docker image ` +
           colors.magenta(fullImageName + ":" + pkgJson.version),
       );
-      // await execSync(
-      //   `docker buildx build --platform ${dockerPlatforms}` +
-      //     ` --build-arg GITHUB_TOKEN=${token} ` +
-      //     ` -t  ${fullImageName}:${pkgJson.version}` +
-      //     ` -t  ${fullImageName}:latest` +
-      //     " --push .",
-      //   {
-      //     cwd: pkgDir,
-      //     stdio: "inherit",
-      //   },
-      // );
+      await execSync(
+        `docker buildx build --platform ${dockerPlatforms}` +
+          ` --build-arg GITHUB_TOKEN=${token} ` +
+          ` -t  ${fullImageName}:${pkgJson.version}` +
+          ` -t  ${fullImageName}:latest` +
+          " --push .",
+        {
+          cwd: pkgDir,
+          stdio: "inherit",
+        },
+      );
 
       // 3. Update description
       const readmeFile = path.join(pkgDir, "README.md");
       if (fs.existsSync(readmeFile)) {
+        core.info("Updating dockerhub repository description..");
         const readme = fs.readFileSync(readmeFile, "utf-8");
         r = await fetch(
           `https://hub.docker.com/v2/repositories/${fullImageName}/`,
@@ -128,9 +129,17 @@ async function run() {
             },
           },
         );
-        if (!r.ok) {
+        if (r.ok)
+          core.info(
+            colors.green(
+              "DockerHub repository description updated successfully",
+            ),
+          );
+        else {
           const errorText = await r.text();
-          core.setFailed(`Docker login failed: ${r.status} - ${errorText}`);
+          core.setFailed(
+            `Update description failed: ${r.status} - ${errorText}`,
+          );
           return;
         }
       }
