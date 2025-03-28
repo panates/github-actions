@@ -92,16 +92,16 @@ jobs:
         run: |
           ${{ inputs.build_script }}
 
-      - name: "Create GitHub Release"
-        id: create_release
-        uses: ncipollo/release-action@v1
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          tag: ${{ steps.environment.outputs.lastTag }}
-          bodyFile:  "COMMIT_CHANGELOG.md"
-          draft: false
-          prerelease: false
-          replacesArtifacts: true
+#      - name: "Create GitHub Release"
+#        id: create_release
+#        uses: ncipollo/release-action@v1
+#        with:
+#          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+#          tag: ${{ steps.environment.outputs.lastTag }}
+#          bodyFile:  "COMMIT_CHANGELOG.md"
+#          draft: false
+#          prerelease: false
+#          replacesArtifacts: true
 
       - name: "Publish Npm Packages"
         if: ${{ steps.environment.outputs.npmPackages && inputs.npm-publish == 'true'}}
@@ -113,7 +113,7 @@ jobs:
 
       - name: "Build Docker Images"
         if: ${{  steps.environment.outputs.dockerPackages && inputs.dockerize == 'true'}}
-        uses: panates/github-actions/.github/actions/release-docker@v1
+        uses: panates/github-actions/.github/actions/release-docker@main
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           workspace: ${{ inputs.workspace }}

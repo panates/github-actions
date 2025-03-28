@@ -20051,7 +20051,6 @@ async function run() {
     core.info("No docker packages found. Skipping");
     return;
   }
-  const token = core.getInput("token", { required: true });
   const rootDir = core.getInput("workspace") || process.cwd();
   const dockerHubUsername = core.getInput("docherhub-username", {
     required: true
@@ -20062,7 +20061,6 @@ async function run() {
   const dockerhubNamespace = core.getInput("dockerhub-namespace", {
     required: true
   });
-  const dockerPlatforms = core.getInput("platforms", { required: true });
   core.info("imageFiles");
   const imageFilesMap = core.getInput("image-files", {
     required: true
@@ -20079,7 +20077,7 @@ async function run() {
       { stdio: "inherit" }
     );
     core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into dockerhub..`));
-    const r = await fetch(`https://hub.docker.com/v2/users/login/`, {
+    let r = await fetch(`https://hub.docker.com/v2/users/login/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -20116,17 +20114,10 @@ async function run() {
       core.info(
         `\u{1F9EA} Building docker image ` + import_ansi_colors.default.magenta(fullImageName + ":" + pkgJson.version)
       );
-      await (0, import_node_child_process.execSync)(
-        `docker buildx build --platform ${dockerPlatforms} --build-arg GITHUB_TOKEN=${token}  -t  ${fullImageName}:${pkgJson.version} -t  ${fullImageName}:latest --push .`,
-        {
-          cwd: pkgDir,
-          stdio: "inherit"
-        }
-      );
       const readmeFile = import_node_path.default.join(pkgDir, "README.md");
       if (import_node_fs.default.existsSync(readmeFile)) {
         const readme = import_node_fs.default.readFileSync(readmeFile, "utf-8");
-        await fetch(
+        r = await fetch(
           `https://hub.docker.com/v2/repositories/${fullImageName}/`,
           {
             method: "PATCH",
@@ -20140,6 +20131,11 @@ async function run() {
             }
           }
         );
+        if (!r.ok) {
+          const errorText = await r.text();
+          core.setFailed(`Docker login failed: ${r.status} - ${errorText}`);
+          return;
+        }
       }
     }
   } catch (error) {
