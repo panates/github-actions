@@ -20078,23 +20078,6 @@ async function run() {
       `echo "${dockerHubPassword}" | docker login --username ${dockerHubUsername} --password-stdin`,
       { stdio: "inherit" }
     );
-    core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into dockerhub..`));
-    let r = await fetch(`https://hub.docker.com/v2/users/login/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        username: dockerHubUsername,
-        password: dockerHubPassword
-      })
-    });
-    if (!r.ok) {
-      const errorText = await r.text();
-      core.setFailed(`Docker login failed: ${r.status} - ${errorText}`);
-      return;
-    }
-    const dockerHubToken = (await r.json()).token;
     core.info(import_ansi_colors.default.yellow(`\u{1F527} One-time setup if buildx isn\u2019t initialized`));
     await (0, import_node_child_process.execSync)("docker buildx create --use || true", {
       stdio: "inherit"
@@ -20123,12 +20106,41 @@ async function run() {
           stdio: "inherit"
         }
       );
+    }
+    core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into dockerhub..`));
+    let r = await fetch(`https://hub.docker.com/v2/users/login/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        username: dockerHubUsername,
+        password: dockerHubPassword
+      })
+    });
+    if (!r.ok) {
+      const errorText = await r.text();
+      core.setFailed(`Docker login failed: ${r.status} - ${errorText}`);
+      return;
+    }
+    const dockerHubToken = (await r.json()).token;
+    for (const pkg of dockerPackages) {
+      const pkgDir = import_node_path.default.join(rootDir, pkg.directory);
+      const buildDir = import_node_path.default.join(pkgDir, pkg.buildDir || "./");
+      const pkgJson = JSON.parse(
+        import_node_fs.default.readFileSync(import_node_path.default.join(buildDir, "package.json"), "utf-8")
+      );
       const readmeFile = import_node_path.default.join(pkgDir, "README.md");
       if (import_node_fs.default.existsSync(readmeFile)) {
-        core.info("Updating dockerhub repository description..");
+        const imageName = imageFilesMap[pkg.name];
+        core.info(
+          import_ansi_colors.default.yellow(
+            `Updating dockerhub repository description for ${dockerhubNamespace}/${imageName} ..`
+          )
+        );
         const readme = import_node_fs.default.readFileSync(readmeFile, "utf-8");
         r = await fetch(
-          `https://hub.docker.com/v2/repositories/${fullImageName}/`,
+          `https://hub.docker.com/v2/repositories/${dockerhubNamespace}/${imageName}/`,
           {
             method: "PATCH",
             body: JSON.stringify({
@@ -20157,7 +20169,7 @@ async function run() {
       }
     }
   } catch (error) {
-    core.setFailed(error);
+    core.setFailed(error.message + "\n" + error.stack);
   }
 }
 run().catch((error) => {

@@ -48,26 +48,6 @@ async function run() {
       { stdio: "inherit" },
     );
 
-    /** Login to docker and get token */
-    core.info(colors.yellow(`🔐 Logging into dockerhub..`));
-    let r = await fetch(`https://hub.docker.com/v2/users/login/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: dockerHubUsername,
-        password: dockerHubPassword,
-      }),
-    });
-    if (!r.ok) {
-      const errorText = await r.text();
-      core.setFailed(`Docker login failed: ${r.status} - ${errorText}`);
-      return;
-    }
-
-    const dockerHubToken = (await r.json()).token;
-
     core.info(colors.yellow(`🔧 One-time setup if buildx isn’t initialized`));
     await execSync("docker buildx create --use || true", {
       stdio: "inherit",
@@ -81,6 +61,7 @@ async function run() {
       }
     }
 
+    /** Build docker images */
     for (const pkg of dockerPackages) {
       const pkgDir = path.join(rootDir, pkg.directory);
       const buildDir = path.join(pkgDir, pkg.buildDir || "./");
@@ -109,14 +90,49 @@ async function run() {
           stdio: "inherit",
         },
       );
+    }
 
-      // 3. Update description
+    /** Login to docker and get token */
+    core.info(colors.yellow(`🔐 Logging into dockerhub..`));
+    let r = await fetch(`https://hub.docker.com/v2/users/login/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: dockerHubUsername,
+        password: dockerHubPassword,
+      }),
+    });
+    if (!r.ok) {
+      const errorText = await r.text();
+      core.setFailed(`Docker login failed: ${r.status} - ${errorText}`);
+      return;
+    }
+
+    const dockerHubToken = (await r.json()).token;
+
+    /** Update DockerHub descriptions */
+    for (const pkg of dockerPackages) {
+      const pkgDir = path.join(rootDir, pkg.directory);
+      const buildDir = path.join(pkgDir, pkg.buildDir || "./");
+
+      /** Read package.json */
+      const pkgJson = JSON.parse(
+        fs.readFileSync(path.join(buildDir, "package.json"), "utf-8"),
+      );
+
       const readmeFile = path.join(pkgDir, "README.md");
       if (fs.existsSync(readmeFile)) {
-        core.info("Updating dockerhub repository description..");
+        const imageName = imageFilesMap[pkg.name];
+        core.info(
+          colors.yellow(
+            `Updating dockerhub repository description for ${dockerhubNamespace}/${imageName} ..`,
+          ),
+        );
         const readme = fs.readFileSync(readmeFile, "utf-8");
         r = await fetch(
-          `https://hub.docker.com/v2/repositories/${fullImageName}/`,
+          `https://hub.docker.com/v2/repositories/${dockerhubNamespace}/${imageName}/`,
           {
             method: "PATCH",
             body: JSON.stringify({
@@ -145,7 +161,7 @@ async function run() {
       }
     }
   } catch (error) {
-    core.setFailed(error);
+    core.setFailed(error.message + "\n" + error.stack);
   }
 }
 
