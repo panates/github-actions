@@ -11,5 +11,5 @@ inputs:
     default: ${{ github.workspace }}
 
 runs:
-  using: "node22"
+  using: "node20"
   main: "dist/index.js"

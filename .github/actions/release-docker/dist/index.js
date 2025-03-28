@@ -20108,7 +20108,7 @@ async function run() {
       );
     }
     core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into dockerhub..`));
-    let r = await fetch(`https://hub.docker.com/v2/users/login/`, {
+    let r = await refetch(`https://hub.docker.com/v2/users/login/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -20139,7 +20139,7 @@ async function run() {
           )
         );
         const readme = import_node_fs.default.readFileSync(readmeFile, "utf-8");
-        r = await fetch(
+        r = await refetch(
           `https://hub.docker.com/v2/repositories/${dockerhubNamespace}/${imageName}/`,
           {
             method: "PATCH",
@@ -20171,6 +20171,18 @@ async function run() {
   } catch (error) {
     core.setFailed(error.message + "\n" + error.stack);
   }
+}
+async function refetch(url, options = {}, retry = 0) {
+  let res;
+  try {
+    res = await fetch(url, options);
+  } catch (error) {
+    if (retry++ > 5) throw error;
+    core.info("Fetch failed. retrying..");
+    await new Promise((resolve) => setTimeout(resolve, 3e3));
+    return refetch(url, options, retry);
+  }
+  return res;
 }
 run().catch((error) => {
   core.setFailed(error);
