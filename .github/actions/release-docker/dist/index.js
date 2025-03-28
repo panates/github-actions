@@ -20130,7 +20130,7 @@ async function run() {
       const pkgJson = JSON.parse(
         import_node_fs.default.readFileSync(import_node_path.default.join(buildDir, "package.json"), "utf-8")
       );
-      const readmeFile = import_node_path.default.join(pkgDir, "README.md");
+      const readmeFile = import_node_path.default.join(pkgDir, "DOCKER_README.md");
       if (import_node_fs.default.existsSync(readmeFile)) {
         const imageName = imageFilesMap[pkg.name];
         core.info(

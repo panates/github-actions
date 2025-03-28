@@ -122,7 +122,7 @@ async function run() {
         fs.readFileSync(path.join(buildDir, "package.json"), "utf-8"),
       );
 
-      const readmeFile = path.join(pkgDir, "README.md");
+      const readmeFile = path.join(pkgDir, "DOCKER_README.md");
       if (fs.existsSync(readmeFile)) {
         const imageName = imageFilesMap[pkg.name];
         core.info(
