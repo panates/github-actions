@@ -20098,6 +20098,7 @@ async function run() {
     return;
   }
   const token = core2.getInput("token", { required: true });
+  const npmToken = core2.getInput("npm-token");
   const rootDir = core2.getInput("workspace") || process.cwd();
   try {
     for (const pkg of npmPackages) {
@@ -20113,6 +20114,10 @@ async function run() {
       setNpmrcValue("//npm.pkg.github.com/:_authToken", token, {
         cwd: buildDir
       });
+      if (npmToken)
+        setNpmrcValue("//registry.npmjs.org/:_authToken", npmToken, {
+          cwd: buildDir
+        });
       core2.info(
         `Checking if ${import_ansi_colors.default.magenta(
           pkgJson.name + "@" + pkgJson.version

@@ -16,6 +16,7 @@ async function run() {
   }
 
   const token = core.getInput("token", { required: true });
+  const npmToken = core.getInput("npm-token");
   const rootDir = core.getInput("workspace") || process.cwd();
 
   try {
@@ -36,6 +37,10 @@ async function run() {
       setNpmrcValue("//npm.pkg.github.com/:_authToken", token, {
         cwd: buildDir,
       });
+      if (npmToken)
+        setNpmrcValue("//registry.npmjs.org/:_authToken", npmToken, {
+          cwd: buildDir,
+        });
 
       /** Check if package exists in repository */
       core.info(
