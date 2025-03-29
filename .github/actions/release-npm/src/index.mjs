@@ -20,6 +20,11 @@ async function run() {
   const rootDir = core.getInput("workspace") || process.cwd();
 
   try {
+    core.info(
+      colors.yellow(
+        `Publishing ${npmPackages.length} packages to npm repository`,
+      ),
+    );
     for (const pkg of npmPackages) {
       const pkgDir = path.join(rootDir, pkg.directory);
       const buildDir = path.join(pkgDir, pkg.buildDir || "./");
@@ -60,7 +65,7 @@ async function run() {
             pkg.name + "@" + pkgJson.version,
           )} already exists in npm repository. Skipping.`,
         );
-        return;
+        continue;
       }
       /** Publish package */
       core.info(
@@ -68,14 +73,20 @@ async function run() {
       );
 
       try {
-        return execSync("npm publish", {
+        await execSync("npm publish", {
           cwd: buildDir,
           stdio: "pipe",
         });
+        core.info(
+          colors.green(
+            `Package ${colors.magenta(
+              pkgJson.name + "@" + pkgJson.version,
+            )} published`,
+          ),
+        );
       } catch (error) {
         const msg = error.stderr?.toString();
         core.setFailed(msg);
-        return;
       }
     }
   } catch (error) {

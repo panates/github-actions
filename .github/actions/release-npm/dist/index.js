@@ -20101,6 +20101,11 @@ async function run() {
   const npmToken = core2.getInput("npm-token");
   const rootDir = core2.getInput("workspace") || process.cwd();
   try {
+    core2.info(
+      import_ansi_colors.default.yellow(
+        `Publishing ${npmPackages.length} packages to npm repository`
+      )
+    );
     for (const pkg of npmPackages) {
       const pkgDir = import_node_path2.default.join(rootDir, pkg.directory);
       const buildDir = import_node_path2.default.join(pkgDir, pkg.buildDir || "./");
@@ -20133,20 +20138,26 @@ async function run() {
             pkg.name + "@" + pkgJson.version
           )} already exists in npm repository. Skipping.`
         );
-        return;
+        continue;
       }
       core2.info(
         `Publishing ${import_ansi_colors.default.magenta(pkgJson.name + "@" + pkgJson.version)}`
       );
       try {
-        return (0, import_node_child_process2.execSync)("npm publish", {
+        await (0, import_node_child_process2.execSync)("npm publish", {
           cwd: buildDir,
           stdio: "pipe"
         });
+        core2.info(
+          import_ansi_colors.default.green(
+            `Package ${import_ansi_colors.default.magenta(
+              pkgJson.name + "@" + pkgJson.version
+            )} published`
+          )
+        );
       } catch (error) {
         const msg = error.stderr?.toString();
         core2.setFailed(msg);
-        return;
       }
     }
   } catch (error) {
