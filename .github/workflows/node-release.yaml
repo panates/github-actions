@@ -37,7 +37,11 @@ on:
         type: string
     secrets:
       PERSONAL_ACCESS_TOKEN:
+        description: "Github personal access token"
         required: true
+      NPM_TOKEN:
+        description: "Access token for npm.pkg.github.com repository"
+        required: false
       DOCKERHUB_NAMESPACE:
         description: "Dockerhub namespace. Required if 'stage-repository' defined"
         required: false
@@ -98,7 +102,7 @@ jobs:
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           tag: ${{ steps.environment.outputs.lastTag }}
-          bodyFile:  "COMMIT_CHANGELOG.md"
+          bodyFile: "COMMIT_CHANGELOG.md"
           draft: false
           prerelease: false
           replacesArtifacts: true
@@ -108,6 +112,7 @@ jobs:
         uses: panates/github-actions/.github/actions/release-npm@v1
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          npm-token: ${{ secrets.NPM_TOKEN }}
           workspace: ${{ inputs.workspace }}
           packages: ${{ steps.environment.outputs.packages }}
 
