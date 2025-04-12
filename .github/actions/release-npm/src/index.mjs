@@ -73,7 +73,7 @@ async function run() {
       );
 
       try {
-        await execSync("npm publish", {
+        await execSync("npm publish --no-workspaces", {
           cwd: buildDir,
           stdio: "pipe",
         });
