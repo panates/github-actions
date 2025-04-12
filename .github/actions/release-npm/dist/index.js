@@ -20144,7 +20144,7 @@ async function run() {
         `Publishing ${import_ansi_colors.default.magenta(pkgJson.name + "@" + pkgJson.version)}`
       );
       try {
-        await (0, import_node_child_process2.execSync)("npm publish", {
+        await (0, import_node_child_process2.execSync)("npm publish --no-workspaces", {
           cwd: buildDir,
           stdio: "pipe"
         });
