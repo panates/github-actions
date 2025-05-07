@@ -16,6 +16,7 @@ jobs:
   sonar-analysis:
     name: 'Sonar Analysis'
     runs-on: self-hosted
+    timeout-minutes: 10
     steps:
       - name: "Check Required Secrets"
         run: |
