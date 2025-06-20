@@ -17,7 +17,7 @@ on:
       node-version:
         description: "NodeJS version"
         type: string
-        default: "22.12"
+        default: ""
       dockerize:
         description: "Determines if docker image will be created"
         type: string

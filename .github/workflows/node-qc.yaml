@@ -9,7 +9,7 @@ on:
       node-version:
         description: "NodeJS version"
         type: string
-        default: "22.12"
+        default: ""
     secrets:
       PERSONAL_ACCESS_TOKEN:
         description: "Github personal access token"
