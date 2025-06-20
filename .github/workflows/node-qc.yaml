@@ -6,6 +6,10 @@ on:
         type: string
         description: "QC script to be executed"
         default: 'npm run qc'
+      node-version:
+        description: "NodeJS version"
+        type: string
+        default: "22.12"
     secrets:
       PERSONAL_ACCESS_TOKEN:
         description: "Github personal access token"
@@ -29,6 +33,7 @@ jobs:
           install-deps: "false"
           cache: "true"
           cache-key: "dev"
+          node-version: ${{ inputs.node-version }}
 
       - name: Install dev dependencies
         run: |
