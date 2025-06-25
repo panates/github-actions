@@ -20142,22 +20142,17 @@ async function run() {
       core2.info(
         `Publishing ${import_ansi_colors.default.magenta(pkgJson.name + "@" + pkgJson.version)}`
       );
-      try {
-        await (0, import_node_child_process2.execSync)("npm publish --no-workspaces", {
-          cwd: buildDir,
-          stdio: "pipe"
-        });
-        core2.info(
-          import_ansi_colors.default.green(
-            `Package ${import_ansi_colors.default.magenta(
-              pkgJson.name + "@" + pkgJson.version
-            )} published`
-          )
-        );
-      } catch (error) {
-        const msg = error.stderr?.toString();
-        core2.setFailed(msg);
-      }
+      (0, import_node_child_process2.execSync)("npm publish --no-workspaces", {
+        cwd: buildDir,
+        stdio: "inherit"
+      });
+      core2.info(
+        import_ansi_colors.default.green(
+          `Package ${import_ansi_colors.default.magenta(
+            pkgJson.name + "@" + pkgJson.version
+          )} published`
+        )
+      );
     }
   } catch (error) {
     core2.setFailed(error);
