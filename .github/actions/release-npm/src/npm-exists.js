@@ -14,17 +14,17 @@ export async function npmExists(packageName, options) {
   const registry = options?.registry || "https://registry.npmjs.org";
   try {
     if (options.version) packageName += `@${options.version}`;
-    const version = execSync(
+    const cmd =
       `npm show ${packageName} version` +
-        (registry ? ` --registry ${registry}` : ""),
-      {
-        cwd: options?.cwd,
-        stdio: "pipe",
-      },
-    )
+      (registry ? ` --registry ${registry}` : "");
+    core.debug(cmd);
+    const version = execSync(cmd, {
+      cwd: options?.cwd,
+      stdio: "pipe",
+    })
       .toString()
       .trim();
-    core.debug(version);
+    core.debug("version: " + version);
     return version;
   } catch (error) {
     const msg = error.stderr.toString();

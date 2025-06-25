@@ -20052,14 +20052,13 @@ async function npmExists(packageName, options) {
   const registry = options?.registry || "https://registry.npmjs.org";
   try {
     if (options.version) packageName += `@${options.version}`;
-    const version = (0, import_node_child_process.execSync)(
-      `npm show ${packageName} version` + (registry ? ` --registry ${registry}` : ""),
-      {
-        cwd: options?.cwd,
-        stdio: "pipe"
-      }
-    ).toString().trim();
-    core.debug(version);
+    const cmd = `npm show ${packageName} version` + (registry ? ` --registry ${registry}` : "");
+    core.debug(cmd);
+    const version = (0, import_node_child_process.execSync)(cmd, {
+      cwd: options?.cwd,
+      stdio: "pipe"
+    }).toString().trim();
+    core.debug("version: " + version);
     return version;
   } catch (error) {
     const msg = error.stderr.toString();
@@ -20128,14 +20127,14 @@ async function run() {
           pkgJson.name + "@" + pkgJson.version
         )} exists in npm registry`
       );
-      if (await npmExists(pkg.name, {
+      if (await npmExists(pkgJson.name, {
         version: pkgJson.version,
         registry: pkgJson.publishConfig?.registry,
         cwd: buildDir
       })) {
         core2.info(
           `Package ${import_ansi_colors.default.magenta(
-            pkg.name + "@" + pkgJson.version
+            pkgJson.name + "@" + pkgJson.version
           )} already exists in npm repository. Skipping.`
         );
         continue;

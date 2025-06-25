@@ -54,7 +54,7 @@ async function run() {
         )} exists in npm registry`,
       );
       if (
-        await npmExists(pkg.name, {
+        await npmExists(pkgJson.name, {
           version: pkgJson.version,
           registry: pkgJson.publishConfig?.registry,
           cwd: buildDir,
@@ -62,7 +62,7 @@ async function run() {
       ) {
         core.info(
           `Package ${colors.magenta(
-            pkg.name + "@" + pkgJson.version,
+            pkgJson.name + "@" + pkgJson.version,
           )} already exists in npm repository. Skipping.`,
         );
         continue;
