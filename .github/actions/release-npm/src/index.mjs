@@ -72,22 +72,17 @@ async function run() {
         `Publishing ${colors.magenta(pkgJson.name + "@" + pkgJson.version)}`,
       );
 
-      try {
-        await execSync("npm publish --no-workspaces", {
-          cwd: buildDir,
-          stdio: "pipe",
-        });
-        core.info(
-          colors.green(
-            `Package ${colors.magenta(
-              pkgJson.name + "@" + pkgJson.version,
-            )} published`,
-          ),
-        );
-      } catch (error) {
-        const msg = error.stderr?.toString();
-        core.setFailed(msg);
-      }
+      execSync("npm publish --no-workspaces", {
+        cwd: buildDir,
+        stdio: "inherit",
+      });
+      core.info(
+        colors.green(
+          `Package ${colors.magenta(
+            pkgJson.name + "@" + pkgJson.version,
+          )} published`,
+        ),
+      );
     }
   } catch (error) {
     core.setFailed(error);
