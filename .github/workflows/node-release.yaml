@@ -20,6 +20,7 @@ on:
         default: ""
       github-registry:
         description: "Create .npmrc file for organization scoped Github Packages"
+        type: string
         required: false
         default: "true"
       dockerize:
