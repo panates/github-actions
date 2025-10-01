@@ -18,11 +18,10 @@ on:
         description: "NodeJS version"
         type: string
         default: ""
-      github-registry:
-        description: "Create .npmrc file for organization scoped Github Packages"
+      github-registries:
+        description: "Private github registry names (comma separated)"
         type: string
         required: false
-        default: "true"
       dockerize:
         description: "Determines if docker image will be created"
         type: string
@@ -75,7 +74,7 @@ jobs:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           fetch-depth: 100
           node-version: ${{ inputs.node-version }}
-          github-registry: ${{ inputs.github-registry }}
+          github-registries: ${{ inputs.github-registries }}
 
       - name: "Scan Environment"
         id: environment
