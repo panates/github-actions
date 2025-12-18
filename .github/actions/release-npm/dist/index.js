@@ -20329,7 +20329,9 @@ async function run() {
       if (!(ns?.[1] && githubNamespaces.includes(ns[1].substring(1)))) {
         args.push("--provenance");
       }
-      (0, import_node_child_process2.execSync)("npm publish " + args.join(" "), {
+      const command = "npm publish " + args.join(" ");
+      core3.debug("command: " + command);
+      (0, import_node_child_process2.execSync)(command, {
         cwd: buildDir,
         stdio: "inherit"
       });
