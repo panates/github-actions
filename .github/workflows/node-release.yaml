@@ -76,7 +76,7 @@ jobs:
           node-version: ${{ inputs.node-version }}
           github-registries: ${{ inputs.github-registries }}
 
-      - name: "Npm config"
+      - name: "Print Npm config"
         run: |
           echo "=== NODE / NPM ==="
           node -v
