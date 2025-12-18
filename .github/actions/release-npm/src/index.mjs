@@ -18,6 +18,9 @@ async function run() {
   // const token = core.getInput("token", { required: true });
   const npmToken = core.getInput("npm-token");
   const rootDir = core.getInput("workspace") || process.cwd();
+  const githubNamespaces = (core.getInput("github-registries") || "").split(
+    /\s*=\s*/,
+  );
 
   try {
     core.info(
@@ -76,7 +79,15 @@ async function run() {
         `Publishing ${colors.magenta(pkgJson.name + "@" + pkgJson.version)}`,
       );
 
-      execSync("npm publish --no-workspaces", {
+      const ns = /(@\w+\/)?(.+)/.exec(pkgJson.name);
+      core.debug("ns: " + ns);
+      core.debug("githubNamespaces: " + githubNamespaces);
+      const args = ["--no-workspaces"];
+      if (ns && githubNamespaces.includes(ns[1].substring(1))) {
+        args.push("--provenance");
+      }
+
+      execSync("npm publish " + args.join(" "), {
         cwd: buildDir,
         stdio: "inherit",
       });

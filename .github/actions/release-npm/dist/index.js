@@ -20276,6 +20276,9 @@ async function run() {
   }
   const npmToken = core3.getInput("npm-token");
   const rootDir = core3.getInput("workspace") || process.cwd();
+  const githubNamespaces = (core3.getInput("github-registries") || "").split(
+    /\s*=\s*/
+  );
   try {
     core3.info(
       import_ansi_colors.default.yellow(
@@ -20319,7 +20322,14 @@ async function run() {
       core3.info(
         `Publishing ${import_ansi_colors.default.magenta(pkgJson.name + "@" + pkgJson.version)}`
       );
-      (0, import_node_child_process2.execSync)("npm publish --no-workspaces", {
+      const ns = /(@\w+\/)?(.+)/.exec(pkgJson.name);
+      core3.debug("ns: " + ns);
+      core3.debug("githubNamespaces: " + githubNamespaces);
+      const args = ["--no-workspaces"];
+      if (ns && githubNamespaces.includes(ns[1].substring(1))) {
+        args.push("--provenance");
+      }
+      (0, import_node_child_process2.execSync)("npm publish " + args.join(" "), {
         cwd: buildDir,
         stdio: "inherit"
       });

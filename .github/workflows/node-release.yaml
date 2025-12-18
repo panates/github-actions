@@ -19,7 +19,7 @@ on:
         type: string
         default: ""
       github-registries:
-        description: "Private github registry names (comma separated)"
+        description: "Namespaces of github registries (comma separated)"
         type: string
         required: false
       dockerize:
@@ -127,7 +127,6 @@ jobs:
         if: ${{ steps.environment.outputs.npmPackages && inputs.npm-publish == 'true'}}
         uses: panates/github-actions/.github/actions/release-npm@v1
         with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           npm-token: ${{ secrets.NPM_TOKEN }}
           workspace: ${{ inputs.workspace }}
           packages: ${{ steps.environment.outputs.packages }}
