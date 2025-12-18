@@ -15,7 +15,7 @@ async function run() {
     return;
   }
 
-  const token = core.getInput("token", { required: true });
+  // const token = core.getInput("token", { required: true });
   const npmToken = core.getInput("npm-token");
   const rootDir = core.getInput("workspace") || process.cwd();
 
@@ -39,13 +39,15 @@ async function run() {
       );
 
       /** Set npm credentials for "npm.pkg.github.com" registry */
-      setNpmrcValue("//npm.pkg.github.com/:_authToken", token, {
-        cwd: buildDir,
-      });
+      // setNpmrcValue("//npm.pkg.github.com/:_authToken", token, {
+      //   cwd: buildDir,
+      // });
       if (npmToken)
         setNpmrcValue("//registry.npmjs.org/:_authToken", npmToken, {
           cwd: buildDir,
         });
+
+      core.debug("npmrc content: \n" + readNpmrc({ cwd: buildDir }));
 
       /** Check if package exists in repository */
       core.info(
@@ -71,8 +73,6 @@ async function run() {
       core.info(
         `Publishing ${colors.magenta(pkgJson.name + "@" + pkgJson.version)}`,
       );
-
-      core.debug("npmrc content: \n" + readNpmrc({ cwd: buildDir }));
 
       execSync("npm publish --no-workspaces", {
         cwd: buildDir,
