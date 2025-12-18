@@ -83,7 +83,7 @@ async function run() {
       core.debug("ns: " + ns[1]);
       core.debug("githubNamespaces: " + githubNamespaces);
       const args = ["--no-workspaces"];
-      if (!(ns && githubNamespaces.includes(ns[1].substring(1)))) {
+      if (!(ns?.[1] && githubNamespaces.includes(ns[1].substring(1)))) {
         args.push("--provenance");
       }
 

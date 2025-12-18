@@ -20326,7 +20326,7 @@ async function run() {
       core3.debug("ns: " + ns[1]);
       core3.debug("githubNamespaces: " + githubNamespaces);
       const args = ["--no-workspaces"];
-      if (!(ns && githubNamespaces.includes(ns[1].substring(1)))) {
+      if (!(ns?.[1] && githubNamespaces.includes(ns[1].substring(1)))) {
         args.push("--provenance");
       }
       (0, import_node_child_process2.execSync)("npm publish " + args.join(" "), {
