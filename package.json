@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "1.0.25",
+  "version": "1.0.26",
   "scripts": {
     "prepare": "husky",
     "tag": "npm run tag:version && npm run tag:major && npm run tag:push",
