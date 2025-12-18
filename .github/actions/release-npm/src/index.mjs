@@ -4,7 +4,7 @@ import path from "node:path";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
 import { npmExists } from "./npm-exists.js";
-import { setNpmrcValue } from "./npmrc-utils.js";
+import { readNpmrc, setNpmrcValue } from "./npmrc-utils.js";
 
 async function run() {
   /** Read packages inputs */
@@ -71,6 +71,8 @@ async function run() {
       core.info(
         `Publishing ${colors.magenta(pkgJson.name + "@" + pkgJson.version)}`,
       );
+
+      core.debug("npmrc content: \n" + readNpmrc({ cwd: buildDir }));
 
       execSync("npm publish --no-workspaces", {
         cwd: buildDir,
