@@ -15,7 +15,7 @@ async function run() {
     return;
   }
 
-  // const token = core.getInput("token", { required: true });
+  const token = core.getInput("token");
   const npmToken = core.getInput("npm-token");
   const rootDir = core.getInput("workspace") || process.cwd();
   const githubNamespaces = (core.getInput("github-registries") || "").split(
@@ -42,9 +42,12 @@ async function run() {
       );
 
       /** Set npm credentials for "npm.pkg.github.com" registry */
-      // setNpmrcValue("//npm.pkg.github.com/:_authToken", token, {
-      //   cwd: buildDir,
-      // });
+      if (token && githubNamespaces.length) {
+        setNpmrcValue("//npm.pkg.github.com/:_authToken", token, {
+          cwd: buildDir,
+        });
+      }
+
       if (npmToken)
         setNpmrcValue("//registry.npmjs.org/:_authToken", npmToken, {
           cwd: buildDir,
@@ -83,7 +86,10 @@ async function run() {
       core.debug("ns: " + ns[1]);
       core.debug("githubNamespaces: " + githubNamespaces);
       const args = ["--no-workspaces"];
-      if (!(ns?.[1] && githubNamespaces.includes(ns[1].substring(1)))) {
+      if (
+        !npmToken &&
+        !(ns?.[1] && githubNamespaces.includes(ns[1].substring(1)))
+      ) {
         args.push("--provenance");
         setNpmrcValue("//registry.npmjs.org/:_authenticity_token=", "true", {
           cwd: buildDir,

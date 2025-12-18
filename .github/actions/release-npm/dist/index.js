@@ -20274,6 +20274,7 @@ async function run() {
     core3.info("No npm packages found. Skipping");
     return;
   }
+  const token = core3.getInput("token");
   const npmToken = core3.getInput("npm-token");
   const rootDir = core3.getInput("workspace") || process.cwd();
   const githubNamespaces = (core3.getInput("github-registries") || "").split(
@@ -20295,6 +20296,11 @@ async function run() {
       const pkgJson = JSON.parse(
         import_node_fs2.default.readFileSync(import_node_path2.default.join(buildDir, "package.json"), "utf-8")
       );
+      if (token && githubNamespaces.length) {
+        setNpmrcValue("//npm.pkg.github.com/:_authToken", token, {
+          cwd: buildDir
+        });
+      }
       if (npmToken)
         setNpmrcValue("//registry.npmjs.org/:_authToken", npmToken, {
           cwd: buildDir
@@ -20326,7 +20332,7 @@ async function run() {
       core3.debug("ns: " + ns[1]);
       core3.debug("githubNamespaces: " + githubNamespaces);
       const args = ["--no-workspaces"];
-      if (!(ns?.[1] && githubNamespaces.includes(ns[1].substring(1)))) {
+      if (!npmToken && !(ns?.[1] && githubNamespaces.includes(ns[1].substring(1)))) {
         args.push("--provenance");
         setNpmrcValue("//registry.npmjs.org/:_authenticity_token=", "true", {
           cwd: buildDir
