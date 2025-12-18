@@ -20296,6 +20296,8 @@ async function run() {
         setNpmrcValue("//registry.npmjs.org/:_authToken", npmToken, {
           cwd: buildDir
         });
+      core3.debug("NODE_AUTH_TOKEN:" + process.env.NODE_AUTH_TOKEN);
+      core3.debug("NPM_TOKEN:" + process.env.NPM_TOKEN);
       core3.debug("npmrc content: \n" + readNpmrc({ cwd: buildDir }));
       core3.info(
         `Checking if ${import_ansi_colors.default.magenta(
