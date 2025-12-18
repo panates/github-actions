@@ -47,6 +47,8 @@ async function run() {
           cwd: buildDir,
         });
 
+      core.debug("NODE_AUTH_TOKEN:" + process.env.NODE_AUTH_TOKEN);
+      core.debug("NPM_TOKEN:" + process.env.NPM_TOKEN);
       core.debug("npmrc content: \n" + readNpmrc({ cwd: buildDir }));
 
       /** Check if package exists in repository */
