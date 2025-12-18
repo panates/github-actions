@@ -20327,6 +20327,10 @@ async function run() {
       core3.debug("githubNamespaces: " + githubNamespaces);
       const args = ["--no-workspaces"];
       if (!(ns?.[1] && githubNamespaces.includes(ns[1].substring(1)))) {
+        (0, import_node_child_process2.execSync)("npm config set //registry.npmjs.org/:_authType=oidc", {
+          cwd: buildDir,
+          stdio: "inherit"
+        });
         args.push("--provenance");
       }
       const command = "npm publish " + args.join(" ");
