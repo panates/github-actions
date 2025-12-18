@@ -87,7 +87,10 @@ async function run() {
         args.push("--provenance");
       }
 
-      execSync("npm publish " + args.join(" "), {
+      const command = "npm publish " + args.join(" ");
+      core.debug("command: " + command);
+
+      execSync(command, {
         cwd: buildDir,
         stdio: "inherit",
       });
