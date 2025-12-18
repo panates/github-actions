@@ -76,6 +76,23 @@ jobs:
           node-version: ${{ inputs.node-version }}
           github-registries: ${{ inputs.github-registries }}
 
+      - name: "Npm config"
+        run: |
+          echo "=== NODE / NPM ==="
+          node -v
+          npm -v
+          
+          echo "=== WORKFLOW ==="
+          echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
+          echo "GITHUB_WORKFLOW_REF=$GITHUB_WORKFLOW_REF"
+          echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
+          
+          echo "=== REGISTRY ==="
+          npm config get registry
+          
+          echo "=== FULL CONFIG ==="
+          npm config list
+
       - name: "Scan Environment"
         id: environment
         uses: panates/gh-repository-info@v1
