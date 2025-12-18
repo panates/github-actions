@@ -20274,7 +20274,6 @@ async function run() {
     core3.info("No npm packages found. Skipping");
     return;
   }
-  const token = core3.getInput("token", { required: true });
   const npmToken = core3.getInput("npm-token");
   const rootDir = core3.getInput("workspace") || process.cwd();
   try {
@@ -20293,13 +20292,11 @@ async function run() {
       const pkgJson = JSON.parse(
         import_node_fs2.default.readFileSync(import_node_path2.default.join(buildDir, "package.json"), "utf-8")
       );
-      setNpmrcValue("//npm.pkg.github.com/:_authToken", token, {
-        cwd: buildDir
-      });
       if (npmToken)
         setNpmrcValue("//registry.npmjs.org/:_authToken", npmToken, {
           cwd: buildDir
         });
+      core3.debug("npmrc content: \n" + readNpmrc({ cwd: buildDir }));
       core3.info(
         `Checking if ${import_ansi_colors.default.magenta(
           pkgJson.name + "@" + pkgJson.version
@@ -20320,7 +20317,6 @@ async function run() {
       core3.info(
         `Publishing ${import_ansi_colors.default.magenta(pkgJson.name + "@" + pkgJson.version)}`
       );
-      core3.debug("npmrc content: \n" + readNpmrc({ cwd: buildDir }));
       (0, import_node_child_process2.execSync)("npm publish --no-workspaces", {
         cwd: buildDir,
         stdio: "inherit"
