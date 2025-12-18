@@ -84,11 +84,10 @@ async function run() {
       core.debug("githubNamespaces: " + githubNamespaces);
       const args = ["--no-workspaces"];
       if (!(ns?.[1] && githubNamespaces.includes(ns[1].substring(1)))) {
-        execSync("npm config set //registry.npmjs.org/:_authType=oidc", {
-          cwd: buildDir,
-          stdio: "inherit",
-        });
         args.push("--provenance");
+        setNpmrcValue("//registry.npmjs.org/:_authenticity_token=", "true", {
+          cwd: buildDir,
+        });
       }
 
       const command = "npm publish " + args.join(" ");
