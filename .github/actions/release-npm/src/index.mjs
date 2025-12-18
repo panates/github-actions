@@ -80,10 +80,10 @@ async function run() {
       );
 
       const ns = /(@\w+\/)?(.+)/.exec(pkgJson.name);
-      core.debug("ns: " + ns);
+      core.debug("ns: " + ns[1]);
       core.debug("githubNamespaces: " + githubNamespaces);
       const args = ["--no-workspaces"];
-      if (ns && githubNamespaces.includes(ns[1].substring(1))) {
+      if (!(ns && githubNamespaces.includes(ns[1].substring(1)))) {
         args.push("--provenance");
       }
 
