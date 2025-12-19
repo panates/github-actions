@@ -11,6 +11,8 @@ inputs:
   workspace:
     description: "The default working directory on the runner for steps, and the default location of your repository when using the checkout action"
     default: ${{ github.workspace }}
+  github-registries:
+    description: "Namespaces of github registries (comma separated)"
 
 runs:
   using: "node20"

@@ -131,6 +131,7 @@ jobs:
           npm-token: ${{ secrets.NPM_TOKEN }}
           workspace: ${{ inputs.workspace }}
           packages: ${{ steps.environment.outputs.packages }}
+          github-registries: ${{ inputs.github-registries }}
 
       - name: "Build Docker Images"
         if: ${{  steps.environment.outputs.dockerPackages && inputs.dockerize == 'true'}}

@@ -86,15 +86,6 @@ async function run() {
       core.debug("ns: " + ns[1]);
       core.debug("githubNamespaces: " + githubNamespaces);
       const args = ["--no-workspaces"];
-      if (
-        !npmToken &&
-        !(ns?.[1] && githubNamespaces.includes(ns[1].substring(1)))
-      ) {
-        args.push("--provenance");
-        setNpmrcValue("//registry.npmjs.org/:_authenticity_token=", "true", {
-          cwd: buildDir,
-        });
-      }
 
       const command = "npm publish " + args.join(" ");
       core.debug("command: " + command);
