@@ -65,6 +65,7 @@ async function run() {
     for (const pkg of dockerPackages) {
       const pkgDir = path.join(rootDir, pkg.directory);
       const buildDir = path.join(pkgDir, pkg.buildDir || "./");
+      core.debug(`  pkgDir: ${pkgDir}\n  buildDir: ${buildDir}\n`);
 
       /** Read package.json */
       const pkgJson = JSON.parse(
