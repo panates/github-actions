@@ -22,6 +22,14 @@ on:
         description: "Namespaces of github registries (comma separated)"
         type: string
         required: false
+      cache-key:
+        description: "Cache key to be restored"
+        type: string
+        required: false
+      cache-path:
+        description: "Path which cache will be restored"
+        type: string
+        required: false
       dockerize:
         description: "Determines if docker image will be created"
         type: string
@@ -75,6 +83,13 @@ jobs:
           fetch-depth: 100
           node-version: ${{ inputs.node-version }}
           github-registries: ${{ inputs.github-registries }}
+
+      - name: "Restore Cache"
+        if: ${{ inputs.cache-key != '' && inputs.cache-path != '' }}
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ inputs.cache-path }}
+          key: ${{ inputs.cache-key }}
 
       - name: "Print Npm config"
         run: |
