@@ -20287,7 +20287,7 @@ async function run() {
       );
       let command = `docker buildx build --platform ${dockerPlatforms}`;
       if (cachePath) command += ` --build-context shared_deps=${cachePath}`;
-      command += ` --build-arg GITHUB_TOKEN=${token}  -t  ${fullImageName}:${pkgJson.version} -t  ${fullImageName}:latest --push .`;
+      command += `-f ${buildDir}/Dockerfile --build-arg GITHUB_TOKEN=${token}  -t  ${fullImageName}:${pkgJson.version} -t  ${fullImageName}:latest --push .`;
       const cwd = cwdInput ? import_node_path.default.resolve(rootDir, cwdInput) : pkgDir;
       await (0, import_node_child_process.execSync)(command, {
         cwd,

@@ -85,6 +85,7 @@ async function run() {
       let command = `docker buildx build --platform ${dockerPlatforms}`;
       if (cachePath) command += ` --build-context shared_deps=${cachePath}`;
       command +=
+        `-f ${buildDir}/Dockerfile` +
         ` --build-arg GITHUB_TOKEN=${token} ` +
         ` -t  ${fullImageName}:${pkgJson.version}` +
         ` -t  ${fullImageName}:latest` +
