@@ -25,6 +25,8 @@ async function run() {
     required: true,
   });
   const dockerPlatforms = core.getInput("platforms", { required: true });
+  const cachePath = core.getInput("cache-path");
+  const cwdInput = core.getInput("cwd");
 
   core.info("imageFiles");
   const imageFilesMap = core
@@ -80,17 +82,18 @@ async function run() {
         `🧪 Building docker image ` +
           colors.magenta(fullImageName + ":" + pkgJson.version),
       );
-      await execSync(
-        `docker buildx build --platform ${dockerPlatforms}` +
-          ` --build-arg GITHUB_TOKEN=${token} ` +
-          ` -t  ${fullImageName}:${pkgJson.version}` +
-          ` -t  ${fullImageName}:latest` +
-          " --push .",
-        {
-          cwd: pkgDir,
-          stdio: "inherit",
-        },
-      );
+      let command = `docker buildx build --platform ${dockerPlatforms}`;
+      if (cachePath) command += ` --build-context shared_deps=${cachePath}`;
+      command +=
+        ` --build-arg GITHUB_TOKEN=${token} ` +
+        ` -t  ${fullImageName}:${pkgJson.version}` +
+        ` -t  ${fullImageName}:latest` +
+        ` --push .`;
+      const cwd = cwdInput ? path.resolve(rootDir, cwdInput) : pkgDir;
+      await execSync(command, {
+        cwd,
+        stdio: "inherit",
+      });
     }
 
     /** Login to docker and get token */

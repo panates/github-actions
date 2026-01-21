@@ -20244,6 +20244,8 @@ async function run() {
     required: true
   });
   const dockerPlatforms = core.getInput("platforms", { required: true });
+  const cachePath = core.getInput("cache-path");
+  const cwdInput = core.getInput("cwd");
   core.info("imageFiles");
   const imageFilesMap = core.getInput("image-files", {
     required: true
@@ -20283,13 +20285,14 @@ async function run() {
       core.info(
         `\u{1F9EA} Building docker image ` + import_ansi_colors.default.magenta(fullImageName + ":" + pkgJson.version)
       );
-      await (0, import_node_child_process.execSync)(
-        `docker buildx build --platform ${dockerPlatforms} --build-arg GITHUB_TOKEN=${token}  -t  ${fullImageName}:${pkgJson.version} -t  ${fullImageName}:latest --push .`,
-        {
-          cwd: pkgDir,
-          stdio: "inherit"
-        }
-      );
+      let command = `docker buildx build --platform ${dockerPlatforms}`;
+      if (cachePath) command += ` --build-context shared_deps=${cachePath}`;
+      command += ` --build-arg GITHUB_TOKEN=${token}  -t  ${fullImageName}:${pkgJson.version} -t  ${fullImageName}:latest --push .`;
+      const cwd = cwdInput ? import_node_path.default.resolve(rootDir, cwdInput) : pkgDir;
+      await (0, import_node_child_process.execSync)(command, {
+        cwd,
+        stdio: "inherit"
+      });
     }
     core.info(import_ansi_colors.default.yellow(`\u{1F510} Logging into dockerhub..`));
     let r = await refetch(`https://hub.docker.com/v2/users/login/`, {

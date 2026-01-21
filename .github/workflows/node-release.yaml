@@ -34,6 +34,9 @@ on:
         description: "Determines if docker image will be created"
         type: string
         default: 'true'
+      docker-cwd:
+        description: "Working directory for docker build"
+        type: string
       docker-platforms:
         description: "Comma seperated target platforms for Docker images"
         type: string
@@ -160,6 +163,8 @@ jobs:
           docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
           docherhub-password: ${{ secrets.DOCKERHUB_PASS }}
           image-files: ${{ inputs.image-files }}
+          cwd: ${{ inputs.docker-cwd }}
+          cache-path: ${{ inputs.cache-path }}
 
       - name: "Create GitHub Release"
         id: create_release
