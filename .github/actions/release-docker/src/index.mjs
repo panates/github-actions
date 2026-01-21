@@ -87,7 +87,9 @@ async function run() {
           colors.magenta(fullImageName + ":" + pkgJson.version),
       );
       let command = `docker buildx build --platform ${dockerPlatforms}`;
-      if (cachePath) command += ` --build-context shared_deps="${cachePath}"`;
+      command += ` --build-context app="${pkgDir}"`;
+      command += ` --build-context root="${rootDir}"`;
+      if (cachePath) command += ` --build-context deps="${cachePath}"`;
       command +=
         ` --build-arg GITHUB_TOKEN=${token} ` +
         ` -f "${pkgDir}/Dockerfile"` +
