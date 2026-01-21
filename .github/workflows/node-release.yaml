@@ -91,7 +91,7 @@ jobs:
           path: ${{ inputs.cache-path }}
           key: ${{ inputs.cache-key }}
 
-      - name: "Print Npm config"
+      - name: "Print Info"
         run: |
           echo "=== NODE / NPM ==="
           node -v
@@ -102,11 +102,11 @@ jobs:
           echo "GITHUB_WORKFLOW_REF=$GITHUB_WORKFLOW_REF"
           echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
           
-          echo "=== REGISTRY ==="
-          npm config get registry
-          
-          echo "=== FULL CONFIG ==="
+          echo "=== NPM FULL CONFIG ==="
           npm config list
+
+          echo "=== RESTORED CACHE ==="
+          ls -R deps
 
       - name: "Scan Environment"
         id: environment
