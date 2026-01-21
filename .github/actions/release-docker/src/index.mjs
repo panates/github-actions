@@ -25,7 +25,11 @@ async function run() {
     required: true,
   });
   const dockerPlatforms = core.getInput("platforms", { required: true });
-  const cachePath = core.getInput("cache-path");
+  let cachePath = core.getInput("cache-path");
+  if (cachePath) {
+    cachePath = path.resolve(rootDir, cachePath);
+    if (!fs.existsSync(cachePath)) cachePath = "";
+  }
   const cwdInput = core.getInput("cwd");
 
   core.info("imageFiles");
