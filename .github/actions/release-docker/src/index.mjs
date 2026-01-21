@@ -85,8 +85,8 @@ async function run() {
       let command = `docker buildx build --platform ${dockerPlatforms}`;
       if (cachePath) command += ` --build-context shared_deps=${cachePath}`;
       command +=
-        `-f ${pkgDir}/Dockerfile` +
         ` --build-arg GITHUB_TOKEN=${token} ` +
+        ` -f ${pkgDir}/Dockerfile` +
         ` -t  ${fullImageName}:${pkgJson.version}` +
         ` -t  ${fullImageName}:latest` +
         ` --push .`;
@@ -166,7 +166,7 @@ async function run() {
       }
     }
   } catch (error) {
-    core.setFailed(error.message + "\n" + error.stack);
+    core.setFailed(error.message);
   }
 }
 
