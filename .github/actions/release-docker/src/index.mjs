@@ -83,12 +83,12 @@ async function run() {
           colors.magenta(fullImageName + ":" + pkgJson.version),
       );
       let command = `docker buildx build --platform ${dockerPlatforms}`;
-      if (cachePath) command += ` --build-context shared_deps=${cachePath}`;
+      if (cachePath) command += ` --build-context shared_deps="${cachePath}"`;
       command +=
         ` --build-arg GITHUB_TOKEN=${token} ` +
-        ` -f ${pkgDir}/Dockerfile` +
-        ` -t  ${fullImageName}:${pkgJson.version}` +
-        ` -t  ${fullImageName}:latest` +
+        ` -f "${pkgDir}/Dockerfile"` +
+        ` -t "${fullImageName}:${pkgJson.version}"` +
+        ` -t "${fullImageName}:latest"` +
         ` --push .`;
       const cwd = cwdInput ? path.resolve(rootDir, cwdInput) : pkgDir;
       await execSync(command, {
