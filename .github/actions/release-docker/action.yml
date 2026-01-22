@@ -29,7 +29,8 @@ inputs:
     required: true
   cache-path:
     description: "Path which cache restored"
-    required: false
+  ignore-packages:
+    description: "Comma separated list of packages to be ignored"
 
 runs:
   using: "node20"

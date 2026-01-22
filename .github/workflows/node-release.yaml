@@ -54,6 +54,9 @@ on:
       image-files:
         description: "<cr> delimited pairing of <Package name=Image file name>"
         type: string
+      ignore-packages:
+        description: "Comma separated list of packages to be ignored"
+        type: string
     secrets:
       PERSONAL_ACCESS_TOKEN:
         description: "Github personal access token"

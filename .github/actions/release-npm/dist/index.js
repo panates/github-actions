@@ -20286,6 +20286,9 @@ async function run() {
   const token = core3.getInput("token");
   const npmToken = core3.getInput("npm-token");
   const rootDir = core3.getInput("workspace") || process.cwd();
+  const ignorePackages = (core3.getInput("ignore-packages") || "").split(
+    /\s*,\s*/
+  );
   const githubNamespaces = (core3.getInput("github-registries") || "").split(
     /\s*=\s*/
   );
@@ -20296,6 +20299,10 @@ async function run() {
       )
     );
     for (const pkg of npmPackages) {
+      if (ignorePackages.includes(pkg.name)) {
+        core3.info(`Package "${pkg.name}" is ignored. Skipping`);
+        continue;
+      }
       const pkgDir = import_node_path2.default.join(rootDir, pkg.directory);
       const buildDir = import_node_path2.default.join(pkgDir, pkg.buildDir || "./");
       if (!import_node_fs2.default.existsSync(buildDir)) {

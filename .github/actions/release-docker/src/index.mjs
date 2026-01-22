@@ -15,6 +15,10 @@ async function run() {
 
   const token = core.getInput("token", { required: true });
   const rootDir = core.getInput("workspace") || process.cwd();
+  const ignorePackages = (core.getInput("ignore-packages") || "").split(
+    /\s*,\s*/,
+  );
+
   const dockerHubUsername = core.getInput("docherhub-username", {
     required: true,
   });
@@ -61,6 +65,10 @@ async function run() {
 
     /** Validate image files mapping */
     for (const pkg of dockerPackages) {
+      if (ignorePackages.includes(pkg.name)) {
+        core.info(`Package "${pkg.name}" is ignored. Skipping`);
+        continue;
+      }
       if (!imageFilesMap[pkg.name]) {
         core.setFailed(`No image file mapping found for ${pkg.name}`);
         return;

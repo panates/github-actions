@@ -13,6 +13,8 @@ inputs:
     default: ${{ github.workspace }}
   github-registries:
     description: "Namespaces of github registries (comma separated)"
+  ignore-packages:
+    description: "Comma separated list of packages to be ignored"
 
 runs:
   using: "node20"

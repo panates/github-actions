@@ -18,6 +18,9 @@ async function run() {
   const token = core.getInput("token");
   const npmToken = core.getInput("npm-token");
   const rootDir = core.getInput("workspace") || process.cwd();
+  const ignorePackages = (core.getInput("ignore-packages") || "").split(
+    /\s*,\s*/,
+  );
   const githubNamespaces = (core.getInput("github-registries") || "").split(
     /\s*=\s*/,
   );
@@ -29,6 +32,10 @@ async function run() {
       ),
     );
     for (const pkg of npmPackages) {
+      if (ignorePackages.includes(pkg.name)) {
+        core.info(`Package "${pkg.name}" is ignored. Skipping`);
+        continue;
+      }
       const pkgDir = path.join(rootDir, pkg.directory);
       const buildDir = path.join(pkgDir, pkg.buildDir || "./");
       if (!fs.existsSync(buildDir)) {
