@@ -2,11 +2,15 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import * as core from "@actions/core";
+import { splitString } from "fast-tokenizer";
 
 export function coerceToArray(value) {
   if (!value) return [];
   if (Array.isArray(value)) return value;
-  return String(value).split(/\s*,\s*/);
+  value = String(value);
+  return splitString(value, {
+    delimiters: value.includes("\n") ? "\n" : ",",
+  }).filter((v) => !!v);
 }
 
 /**

@@ -25,6 +25,7 @@
     "husky": "^9.1.7",
     "npm-check-updates": "^19.3.1",
     "registry-auth-token": "^5.1.1",
+    "fast-tokenizer": "^1.9.0",
     "yaml": "^2.8.2",
     "zip-lib": "^1.1.2"
   }

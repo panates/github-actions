@@ -20226,11 +20226,209 @@ var import_node_path = __toESM(require("node:path"), 1);
 var core = __toESM(require_core(), 1);
 var import_ansi_colors = __toESM(require_ansi_colors(), 1);
 
+// node_modules/fast-tokenizer/tokenize.js
+function tokenize(input, options) {
+  input = input ? "" + input : "";
+  const len = input.length;
+  const keepDelimiters = options?.keepDelimiters == null ? void 0 : typeof options?.keepDelimiters === "function" ? options.keepDelimiters : () => !!options?.keepDelimiters;
+  const keepQuotes = options?.keepQuotes == null ? void 0 : typeof options?.keepQuotes === "function" ? options.keepQuotes : () => !!options?.keepQuotes;
+  const keepBrackets = options?.keepBrackets == null ? void 0 : typeof options?.keepBrackets === "function" ? options.keepBrackets : () => !!options?.keepBrackets;
+  const delimiters = options?.delimiters != null ? options?.delimiters : tokenize.DEFAULT_DELIMITERS;
+  const quotes = options?.quotes == null || options?.quotes === false ? void 0 : Array.isArray(options.quotes) ? options.quotes : tokenize.DEFAULT_QUOTES;
+  const brackets = options?.brackets == null || options?.brackets === false ? void 0 : typeof options?.brackets === "object" ? options.brackets : tokenize.DEFAULT_BRACKETS;
+  const bracketsL = [];
+  const bracketsR = [];
+  if (brackets) {
+    for (const [l, r] of Object.entries(brackets)) {
+      bracketsL.push(l);
+      bracketsR.push(r);
+    }
+  }
+  const emptyTokens = !!options?.emptyTokens;
+  let escapeFn;
+  if (options?.escape == null) {
+    escapeFn = (c2) => c2 === "\\";
+  } else {
+    const optionsEscape = options.escape;
+    if (typeof optionsEscape === "function")
+      escapeFn = optionsEscape;
+    else if (optionsEscape instanceof RegExp) {
+      escapeFn = (c2) => optionsEscape.test(c2);
+    } else if (typeof optionsEscape === "string" && optionsEscape) {
+      escapeFn = (c2) => c2 === optionsEscape;
+    }
+  }
+  let index = 0;
+  let curIndex = 0;
+  let startIndex = 0;
+  let current = "";
+  let token = "";
+  let c = "";
+  let _next = "";
+  let bracketStack = [];
+  let quoteString = "";
+  let iterator;
+  return {
+    get input() {
+      return input;
+    },
+    get curIndex() {
+      return index - 1;
+    },
+    get startIndex() {
+      return startIndex;
+    },
+    get current() {
+      return current;
+    },
+    reset() {
+      index = 0;
+      curIndex = 0;
+      startIndex = 0;
+      current = "";
+      token = "";
+      bracketStack = [];
+      quoteString = "";
+      _next = "";
+    },
+    next() {
+      startIndex = index;
+      while (index < len) {
+        curIndex = index;
+        c = input.charAt(index++);
+        _next = input.charAt(index);
+        if (escapeFn && escapeFn(c, curIndex, input)) {
+          token += _next;
+          index++;
+          continue;
+        }
+        if (brackets) {
+          let i = bracketsL.findIndex((x) => x === input.substring(curIndex, curIndex + x.length));
+          if (i >= 0) {
+            bracketStack.push(i);
+            if (bracketStack.length > 1 || keepBrackets == null || keepBrackets(bracketsL[i], curIndex, input)) {
+              token += bracketsL[i];
+            }
+            index = curIndex + bracketsL[i].length;
+            continue;
+          }
+          if (bracketStack.length) {
+            i = bracketsR.findIndex((x) => x === input.substring(curIndex, curIndex + x.length));
+            if (i >= 0) {
+              if (i !== bracketStack[bracketStack.length - 1]) {
+                throw new SyntaxError("Closure of brackets was used invalid.");
+              }
+              bracketStack.pop();
+              if (bracketStack.length || keepBrackets == null || keepBrackets(bracketsR[i], curIndex, input)) {
+                token += bracketsR[i];
+              }
+              index = curIndex + bracketsR[i].length;
+              continue;
+            }
+          }
+        }
+        if (bracketStack.length) {
+          token += c;
+          continue;
+        }
+        if (quotes) {
+          const i = quotes.findIndex((x) => x === input.substring(curIndex, curIndex + x.length));
+          if (i >= 0) {
+            const s = quotes[i];
+            if (keepQuotes == null || keepQuotes(s, curIndex, input)) {
+              token += s;
+            }
+            if (quoteString)
+              quoteString = "";
+            else
+              quoteString = s;
+            index = curIndex + s.length;
+            continue;
+          }
+        }
+        if (quoteString) {
+          token += c;
+          continue;
+        }
+        if (delimiters && (typeof delimiters === "string" && delimiters.includes(c) || delimiters instanceof RegExp && delimiters.test(c))) {
+          current = token;
+          token = keepDelimiters && keepDelimiters(c, curIndex, input) ? c : "";
+          if (current || emptyTokens)
+            return current;
+          continue;
+        }
+        token += c;
+      }
+      if (bracketStack.length) {
+        throw new SyntaxError(`Bracket (${bracketStack.pop()}) is not closed`);
+      }
+      current = token;
+      token = "";
+      return current || null;
+    },
+    all() {
+      const arr = [];
+      for (const x of this) {
+        arr.push(x || "");
+      }
+      return arr;
+    },
+    join(separator) {
+      let output = "";
+      let i = 0;
+      for (const x of this) {
+        output += (separator && i++ ? separator : "") + x;
+      }
+      return output;
+    },
+    [Symbol.iterator]() {
+      const next = () => this.next();
+      if (!iterator) {
+        iterator = {
+          next() {
+            const value = next();
+            return {
+              done: value == null,
+              value: value || ""
+            };
+          },
+          [Symbol.iterator]() {
+            return this;
+          }
+        };
+      }
+      return iterator;
+    }
+  };
+}
+(function(tokenize2) {
+  tokenize2.DEFAULT_BRACKETS = { "[": "]", "(": ")" };
+  tokenize2.DEFAULT_QUOTES = ['"', "'", "`"];
+  tokenize2.DEFAULT_DELIMITERS = /\W/;
+})(tokenize || (tokenize = {}));
+
+// node_modules/fast-tokenizer/split-string.js
+function splitString(input, options) {
+  const out = [];
+  const tokenizer = tokenize(input, {
+    delimiters: ",",
+    ...options,
+    emptyTokens: true
+  });
+  for (const x of tokenizer) {
+    out.push(x || "");
+  }
+  return out;
+}
+
 // .github/actions/release-docker/src/utils.mjs
 function coerceToArray(value) {
   if (!value) return [];
   if (Array.isArray(value)) return value;
-  return String(value).split(/\s*,\s*/);
+  value = String(value);
+  return splitString(value, {
+    delimiters: value.includes("\n") ? "\n" : ","
+  }).filter((v) => !!v);
 }
 
 // .github/actions/release-docker/src/index.mjs
