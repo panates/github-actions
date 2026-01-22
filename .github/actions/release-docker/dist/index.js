@@ -20225,6 +20225,15 @@ var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
 var core = __toESM(require_core(), 1);
 var import_ansi_colors = __toESM(require_ansi_colors(), 1);
+
+// .github/actions/release-docker/src/utils.mjs
+function coerceToArray(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  return String(value).split(/\s*,\s*/);
+}
+
+// .github/actions/release-docker/src/index.mjs
 async function run() {
   const packages = JSON.parse(core.getInput("packages", { required: true }));
   const dockerPackages = packages.filter((p) => p.isDockerApp);
@@ -20234,9 +20243,7 @@ async function run() {
   }
   const token = core.getInput("token", { required: true });
   const rootDir = core.getInput("workspace") || process.cwd();
-  const ignorePackages = (core.getInput("ignore-packages") || "").split(
-    /\s*,\s*/
-  );
+  const ignorePackages = coerceToArray(core.getInput("ignore-packages"));
   const dockerHubUsername = core.getInput("docherhub-username", {
     required: true
   });
@@ -20246,7 +20253,11 @@ async function run() {
   const dockerhubNamespace = core.getInput("dockerhub-namespace", {
     required: true
   });
-  const dockerPlatforms = core.getInput("platforms", { required: true });
+  const dockerPlatforms = coerceToArray(
+    core.getInput("platforms", {
+      required: true
+    }) || "linux/amd64"
+  );
   let cachePath = core.getInput("cache-path");
   if (cachePath) {
     cachePath = import_node_path.default.resolve(rootDir, cachePath);
@@ -20254,9 +20265,11 @@ async function run() {
   }
   const cwdInput = core.getInput("cwd");
   core.info("imageFiles");
-  const imageFilesMap = core.getInput("image-files", {
-    required: true
-  }).trim().split(/\s*\n\s*/).reduce((acc, item) => {
+  const imageFilesMap = coerceToArray(
+    core.getInput("image-files", {
+      required: true
+    })
+  ).reduce((acc, item) => {
     const a = item.split(/\s*=\s*/);
     acc[a[0]] = a[1];
     core.info("  " + import_ansi_colors.default.yellow(a[0]) + " = " + import_ansi_colors.default.magenta(a[1]));
@@ -20296,7 +20309,7 @@ async function run() {
       core.info(
         `\u{1F9EA} Building docker image ` + import_ansi_colors.default.magenta(fullImageName + ":" + pkgJson.version)
       );
-      let command = `docker buildx build --platform ${dockerPlatforms}`;
+      let command = `docker buildx build --platform ${dockerPlatforms.join(",")}`;
       command += ` --build-context app="${pkgDir}"`;
       command += ` --build-context root="${rootDir}"`;
       if (cachePath) command += ` --build-context deps="${cachePath}"`;

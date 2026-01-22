@@ -408,7 +408,7 @@ var require_tunnel = __commonJS({
         connectOptions.headers = connectOptions.headers || {};
         connectOptions.headers["Proxy-Authorization"] = "Basic " + new Buffer(connectOptions.proxyAuth).toString("base64");
       }
-      debug4("making CONNECT request");
+      debug3("making CONNECT request");
       var connectReq = self.request(connectOptions);
       connectReq.useChunkedEncodingByDefault = false;
       connectReq.once("response", onResponse);
@@ -428,7 +428,7 @@ var require_tunnel = __commonJS({
         connectReq.removeAllListeners();
         socket.removeAllListeners();
         if (res.statusCode !== 200) {
-          debug4(
+          debug3(
             "tunneling socket could not be established, statusCode=%d",
             res.statusCode
           );
@@ -440,7 +440,7 @@ var require_tunnel = __commonJS({
           return;
         }
         if (head.length > 0) {
-          debug4("got illegal response body from proxy");
+          debug3("got illegal response body from proxy");
           socket.destroy();
           var error = new Error("got illegal response body from proxy");
           error.code = "ECONNRESET";
@@ -448,13 +448,13 @@ var require_tunnel = __commonJS({
           self.removeSocket(placeholder);
           return;
         }
-        debug4("tunneling connection has established");
+        debug3("tunneling connection has established");
         self.sockets[self.sockets.indexOf(placeholder)] = socket;
         return cb(socket);
       }
       function onError(cause) {
         connectReq.removeAllListeners();
-        debug4(
+        debug3(
           "tunneling socket could not be established, cause=%s\n",
           cause.message,
           cause.stack
@@ -516,9 +516,9 @@ var require_tunnel = __commonJS({
       }
       return target;
     }
-    var debug4;
+    var debug3;
     if (process.env.NODE_DEBUG && /\btunnel\b/.test(process.env.NODE_DEBUG)) {
-      debug4 = function() {
+      debug3 = function() {
         var args = Array.prototype.slice.call(arguments);
         if (typeof args[0] === "string") {
           args[0] = "TUNNEL: " + args[0];
@@ -528,10 +528,10 @@ var require_tunnel = __commonJS({
         console.error.apply(console, args);
       };
     } else {
-      debug4 = function() {
+      debug3 = function() {
       };
     }
-    exports2.debug = debug4;
+    exports2.debug = debug3;
   }
 });
 
@@ -19829,7 +19829,7 @@ var require_core = __commonJS({
     exports2.setCommandEcho = setCommandEcho;
     exports2.setFailed = setFailed2;
     exports2.isDebug = isDebug;
-    exports2.debug = debug4;
+    exports2.debug = debug3;
     exports2.error = error;
     exports2.warning = warning2;
     exports2.notice = notice;
@@ -19918,7 +19918,7 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
     function isDebug() {
       return process.env["RUNNER_DEBUG"] === "1";
     }
-    function debug4(message) {
+    function debug3(message) {
       (0, command_1.issueCommand)("debug", {}, message);
     }
     function error(message, properties = {}) {
@@ -20223,12 +20223,38 @@ var require_ansi_colors = __commonJS({
 var import_node_child_process2 = require("node:child_process");
 var import_node_fs2 = __toESM(require("node:fs"), 1);
 var import_node_path2 = __toESM(require("node:path"), 1);
-var core3 = __toESM(require_core(), 1);
+var core2 = __toESM(require_core(), 1);
 var import_ansi_colors = __toESM(require_ansi_colors(), 1);
 
-// .github/actions/release-npm/src/npm-exists.js
+// .github/actions/release-npm/src/utils.mjs
 var import_node_child_process = require("node:child_process");
-var core = __toESM(require_core());
+var import_node_fs = __toESM(require("node:fs"), 1);
+var import_node_path = __toESM(require("node:path"), 1);
+var core = __toESM(require_core(), 1);
+function coerceToArray(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  return String(value).split(/\s*,\s*/);
+}
+function readNpmrc(options) {
+  const npmrcPath = import_node_path.default.join(options?.cwd || process.cwd(), ".npmrc");
+  return import_node_fs.default.existsSync(npmrcPath) ? import_node_fs.default.readFileSync(npmrcPath, "utf8") : "";
+}
+function setNpmrcValue(key, value, options) {
+  let npmrcContent = readNpmrc(options);
+  let i = 0;
+  npmrcContent = npmrcContent.split("\n").map((line) => {
+    if (line.startsWith(key + "=")) {
+      i++;
+      return key + "=" + value;
+    }
+    return line;
+  }).join("\n");
+  if (!i) npmrcContent = npmrcContent += "\n" + key + "=" + value;
+  core.debug("npmrc content: " + npmrcContent);
+  const npmrcPath = import_node_path.default.join(options?.cwd || process.cwd(), ".npmrc");
+  import_node_fs.default.writeFileSync(npmrcPath, npmrcContent.trim());
+}
 async function npmExists(packageName, options) {
   const registry = options?.registry || "https://registry.npmjs.org";
   try {
@@ -20251,62 +20277,34 @@ async function npmExists(packageName, options) {
   }
 }
 
-// .github/actions/release-npm/src/npmrc-utils.js
-var import_node_fs = __toESM(require("node:fs"));
-var import_node_path = __toESM(require("node:path"));
-var core2 = __toESM(require_core());
-function readNpmrc(options) {
-  const npmrcPath = import_node_path.default.join(options?.cwd || process.cwd(), ".npmrc");
-  return import_node_fs.default.existsSync(npmrcPath) ? import_node_fs.default.readFileSync(npmrcPath, "utf8") : "";
-}
-function setNpmrcValue(key, value, options) {
-  let npmrcContent = readNpmrc(options);
-  let i = 0;
-  npmrcContent = npmrcContent.split("\n").map((line) => {
-    if (line.startsWith(key + "=")) {
-      i++;
-      return key + "=" + value;
-    }
-    return line;
-  }).join("\n");
-  if (!i) npmrcContent = npmrcContent += "\n" + key + "=" + value;
-  core2.debug("npmrc content: " + npmrcContent);
-  const npmrcPath = import_node_path.default.join(options?.cwd || process.cwd(), ".npmrc");
-  import_node_fs.default.writeFileSync(npmrcPath, npmrcContent.trim());
-}
-
 // .github/actions/release-npm/src/index.mjs
 async function run() {
-  const packages = JSON.parse(core3.getInput("packages", { required: true }));
+  const packages = JSON.parse(core2.getInput("packages", { required: true }));
   const npmPackages = packages.filter((p) => p.isNpmPackage);
   if (packages.length === 0) {
-    core3.info("No npm packages found. Skipping");
+    core2.info("No npm packages found. Skipping");
     return;
   }
-  const token = core3.getInput("token");
-  const npmToken = core3.getInput("npm-token");
-  const rootDir = core3.getInput("workspace") || process.cwd();
-  const ignorePackages = (core3.getInput("ignore-packages") || "").split(
-    /\s*,\s*/
-  );
-  const githubNamespaces = (core3.getInput("github-registries") || "").split(
-    /\s*=\s*/
-  );
+  const token = core2.getInput("token");
+  const npmToken = core2.getInput("npm-token");
+  const rootDir = core2.getInput("workspace") || process.cwd();
+  const ignorePackages = coerceToArray(core2.getInput("ignore-packages"));
+  const githubNamespaces = coerceToArray(core2.getInput("github-registries"));
   try {
-    core3.info(
+    core2.info(
       import_ansi_colors.default.yellow(
         `Publishing ${npmPackages.length} packages to npm repository`
       )
     );
     for (const pkg of npmPackages) {
       if (ignorePackages.includes(pkg.name)) {
-        core3.info(`Package "${pkg.name}" is ignored. Skipping`);
+        core2.info(`Package "${pkg.name}" is ignored. Skipping`);
         continue;
       }
       const pkgDir = import_node_path2.default.join(rootDir, pkg.directory);
       const buildDir = import_node_path2.default.join(pkgDir, pkg.buildDir || "./");
       if (!import_node_fs2.default.existsSync(buildDir)) {
-        core3.warning("build directory do not exists. Skipping");
+        core2.warning("build directory do not exists. Skipping");
         continue;
       }
       const pkgJson = JSON.parse(
@@ -20321,10 +20319,10 @@ async function run() {
         setNpmrcValue("//registry.npmjs.org/:_authToken", npmToken, {
           cwd: buildDir
         });
-      core3.debug("NODE_AUTH_TOKEN:" + process.env.NODE_AUTH_TOKEN);
-      core3.debug("NPM_TOKEN:" + process.env.NPM_TOKEN);
-      core3.debug("npmrc content: \n" + readNpmrc({ cwd: buildDir }));
-      core3.info(
+      core2.debug("NODE_AUTH_TOKEN:" + process.env.NODE_AUTH_TOKEN);
+      core2.debug("NPM_TOKEN:" + process.env.NPM_TOKEN);
+      core2.debug("npmrc content: \n" + readNpmrc({ cwd: buildDir }));
+      core2.info(
         `Checking if ${import_ansi_colors.default.magenta(
           pkgJson.name + "@" + pkgJson.version
         )} exists in npm registry`
@@ -20334,27 +20332,27 @@ async function run() {
         registry: pkgJson.publishConfig?.registry,
         cwd: buildDir
       })) {
-        core3.info(
+        core2.info(
           `Package ${import_ansi_colors.default.magenta(
             pkgJson.name + "@" + pkgJson.version
           )} already exists in npm repository. Skipping.`
         );
         continue;
       }
-      core3.info(
+      core2.info(
         `Publishing ${import_ansi_colors.default.magenta(pkgJson.name + "@" + pkgJson.version)}`
       );
       const ns = /(@\w+\/)?(.+)/.exec(pkgJson.name);
-      core3.debug("ns: " + ns[1]);
-      core3.debug("githubNamespaces: " + githubNamespaces);
+      core2.debug("ns: " + ns[1]);
+      core2.debug("githubNamespaces: " + githubNamespaces);
       const args = ["--no-workspaces"];
       const command = "npm publish " + args.join(" ");
-      core3.debug("command: " + command);
+      core2.debug("command: " + command);
       (0, import_node_child_process2.execSync)(command, {
         cwd: buildDir,
         stdio: "inherit"
       });
-      core3.info(
+      core2.info(
         import_ansi_colors.default.green(
           `Package ${import_ansi_colors.default.magenta(
             pkgJson.name + "@" + pkgJson.version
@@ -20363,11 +20361,11 @@ async function run() {
       );
     }
   } catch (error) {
-    core3.setFailed(error);
+    core2.setFailed(error);
   }
 }
 run().catch((error) => {
-  core3.setFailed(error);
+  core2.setFailed(error);
 });
 /*! Bundled license information:
 

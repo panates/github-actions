@@ -3,8 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
-import { npmExists } from "./npm-exists.js";
-import { readNpmrc, setNpmrcValue } from "./npmrc-utils.js";
+import {
+  coerceToArray,
+  npmExists,
+  readNpmrc,
+  setNpmrcValue,
+} from "./utils.mjs";
 
 async function run() {
   /** Read packages inputs */
@@ -18,12 +22,8 @@ async function run() {
   const token = core.getInput("token");
   const npmToken = core.getInput("npm-token");
   const rootDir = core.getInput("workspace") || process.cwd();
-  const ignorePackages = (core.getInput("ignore-packages") || "").split(
-    /\s*,\s*/,
-  );
-  const githubNamespaces = (core.getInput("github-registries") || "").split(
-    /\s*=\s*/,
-  );
+  const ignorePackages = coerceToArray(core.getInput("ignore-packages"));
+  const githubNamespaces = coerceToArray(core.getInput("github-registries"));
 
   try {
     core.info(

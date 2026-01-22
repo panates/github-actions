@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import * as core from "@actions/core";
 import colors from "ansi-colors";
+import { coerceToArray } from "./utils.mjs";
 
 async function run() {
   /** Read packages inputs */
@@ -15,9 +16,7 @@ async function run() {
 
   const token = core.getInput("token", { required: true });
   const rootDir = core.getInput("workspace") || process.cwd();
-  const ignorePackages = (core.getInput("ignore-packages") || "").split(
-    /\s*,\s*/,
-  );
+  const ignorePackages = coerceToArray(core.getInput("ignore-packages"));
 
   const dockerHubUsername = core.getInput("docherhub-username", {
     required: true,
@@ -28,7 +27,11 @@ async function run() {
   const dockerhubNamespace = core.getInput("dockerhub-namespace", {
     required: true,
   });
-  const dockerPlatforms = core.getInput("platforms", { required: true });
+  const dockerPlatforms = coerceToArray(
+    core.getInput("platforms", {
+      required: true,
+    }) || "linux/amd64",
+  );
   let cachePath = core.getInput("cache-path");
   if (cachePath) {
     cachePath = path.resolve(rootDir, cachePath);
@@ -37,18 +40,16 @@ async function run() {
   const cwdInput = core.getInput("cwd");
 
   core.info("imageFiles");
-  const imageFilesMap = core
-    .getInput("image-files", {
+  const imageFilesMap = coerceToArray(
+    core.getInput("image-files", {
       required: true,
-    })
-    .trim()
-    .split(/\s*\n\s*/)
-    .reduce((acc, item) => {
-      const a = item.split(/\s*=\s*/);
-      acc[a[0]] = a[1];
-      core.info("  " + colors.yellow(a[0]) + " = " + colors.magenta(a[1]));
-      return acc;
-    }, {});
+    }),
+  ).reduce((acc, item) => {
+    const a = item.split(/\s*=\s*/);
+    acc[a[0]] = a[1];
+    core.info("  " + colors.yellow(a[0]) + " = " + colors.magenta(a[1]));
+    return acc;
+  }, {});
 
   try {
     /** Login to docker in terminal */
@@ -94,7 +95,7 @@ async function run() {
         `🧪 Building docker image ` +
           colors.magenta(fullImageName + ":" + pkgJson.version),
       );
-      let command = `docker buildx build --platform ${dockerPlatforms}`;
+      let command = `docker buildx build --platform ${dockerPlatforms.join(",")}`;
       command += ` --build-context app="${pkgDir}"`;
       command += ` --build-context root="${rootDir}"`;
       if (cachePath) command += ` --build-context deps="${cachePath}"`;
