@@ -20480,15 +20480,20 @@ async function npmExists(packageName, options) {
 // .github/actions/release-npm/src/index.mjs
 async function run() {
   const packages = JSON.parse(core2.getInput("packages", { required: true }));
-  const npmPackages = packages.filter((p) => p.isNpmPackage);
+  let ignorePackages = coerceToArray(core2.getInput("ignore-packages"));
+  const npmPackages = packages.filter(
+    (p) => p.isNpmPackage && !ignorePackages.includes(p.name)
+  );
+  ignorePackages = ignorePackages.filter((p) => npmPackages.includes(p));
+  if (ignorePackages.length)
+    core2.info("Ignored Npm Packages: " + ignorePackages);
   if (packages.length === 0) {
-    core2.info("No npm packages found. Skipping");
+    core2.info("No npm packages to publish. Skipping");
     return;
   }
   const token = core2.getInput("token");
   const npmToken = core2.getInput("npm-token");
   const rootDir = core2.getInput("workspace") || process.cwd();
-  const ignorePackages = coerceToArray(core2.getInput("ignore-packages"));
   const githubNamespaces = coerceToArray(core2.getInput("github-registries"));
   try {
     core2.info(

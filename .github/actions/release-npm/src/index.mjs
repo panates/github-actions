@@ -13,16 +13,22 @@ import {
 async function run() {
   /** Read packages inputs */
   const packages = JSON.parse(core.getInput("packages", { required: true }));
-  const npmPackages = packages.filter((p) => p.isNpmPackage);
+  let ignorePackages = coerceToArray(core.getInput("ignore-packages"));
+
+  const npmPackages = packages.filter(
+    (p) => p.isNpmPackage && !ignorePackages.includes(p.name),
+  );
+  ignorePackages = ignorePackages.filter((p) => npmPackages.includes(p));
+  if (ignorePackages.length)
+    core.info("Ignored Npm Packages: " + ignorePackages);
   if (packages.length === 0) {
-    core.info("No npm packages found. Skipping");
+    core.info("No npm packages to publish. Skipping");
     return;
   }
 
   const token = core.getInput("token");
   const npmToken = core.getInput("npm-token");
   const rootDir = core.getInput("workspace") || process.cwd();
-  const ignorePackages = coerceToArray(core.getInput("ignore-packages"));
   const githubNamespaces = coerceToArray(core.getInput("github-registries"));
 
   try {

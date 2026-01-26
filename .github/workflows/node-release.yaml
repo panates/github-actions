@@ -153,6 +153,7 @@ jobs:
           workspace: ${{ inputs.workspace }}
           packages: ${{ steps.environment.outputs.packages }}
           github-registries: ${{ inputs.github-registries }}
+          ignore-packages: ${{ inputs.ignore-packages }}
 
       - name: "Build Docker Images"
         if: ${{  steps.environment.outputs.dockerPackages && inputs.dockerize == 'true'}}
@@ -168,6 +169,7 @@ jobs:
           image-files: ${{ inputs.image-files }}
           cwd: ${{ inputs.docker-cwd }}
           cache-path: ${{ inputs.cache-path }}
+          ignore-packages: ${{ inputs.ignore-packages }}
 
       - name: "Create GitHub Release"
         id: create_release
