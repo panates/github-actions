@@ -178,6 +178,7 @@ jobs:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           tag: ${{ steps.environment.outputs.lastTag }}
           bodyFile: "COMMIT_CHANGELOG.md"
+          allowUpdates: true
           draft: false
           prerelease: false
           replacesArtifacts: true
