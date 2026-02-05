@@ -97,6 +97,7 @@ async function run() {
       );
       let command = `docker buildx build --platform ${dockerPlatforms.join(",")}`;
       command += ` --build-context app="${pkgDir}"`;
+      command += ` --build-context package="${pkgDir}"`;
       command += ` --build-context root="${rootDir}"`;
       if (cachePath) command += ` --build-context deps="${cachePath}"`;
       command +=

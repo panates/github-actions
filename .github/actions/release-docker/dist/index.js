@@ -19492,6 +19492,7 @@ async function run() {
       );
       let command = `docker buildx build --platform ${dockerPlatforms.join(",")}`;
       command += ` --build-context app="${pkgDir}"`;
+      command += ` --build-context package="${pkgDir}"`;
       command += ` --build-context root="${rootDir}"`;
       if (cachePath) command += ` --build-context deps="${cachePath}"`;
       command += ` --build-arg GITHUB_TOKEN=${token}  -f "${pkgDir}/Dockerfile" -t "${fullImageName}:${pkgJson.version}" -t "${fullImageName}:latest" --push .`;
