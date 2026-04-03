@@ -43,10 +43,15 @@ async function run() {
         continue;
       }
       const pkgDir = path.join(rootDir, pkg.directory);
-      const buildDir = path.join(pkgDir, pkg.buildDir || "./");
+      let buildDir = path.join(pkgDir, pkg.buildDir || "./");
       if (!fs.existsSync(buildDir)) {
         core.warning("build directory do not exists. Skipping");
         continue;
+      }
+      if (fs.existsSync(path.join(buildDir, "build/package.json"))) {
+        buildDir = path.join(buildDir, "build");
+      } else if (fs.existsSync(path.join(buildDir, "dist/package.json"))) {
+        buildDir = path.join(buildDir, "dist");
       }
 
       /** Read package.json */

@@ -43,7 +43,7 @@ export function setNpmrcValue(key, value, options) {
       return line;
     })
     .join("\n");
-  if (!i) npmrcContent = npmrcContent += "\n" + key + "=" + value;
+  if (!i) npmrcContent += "\n" + key + "=" + value;
   core.debug("npmrc content: " + npmrcContent);
   const npmrcPath = path.join(options?.cwd || process.cwd(), ".npmrc");
   fs.writeFileSync(npmrcPath, npmrcContent.trim());
@@ -80,6 +80,6 @@ export async function npmExists(packageName, options) {
       core.debug(msg);
       return;
     }
-    throw new Error(msg);
+    throw new Error(msg, { cause: error });
   }
 }

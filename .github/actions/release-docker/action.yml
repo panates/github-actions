@@ -33,5 +33,5 @@ inputs:
     description: "Comma separated list of packages to be ignored"
 
 runs:
-  using: "node20"
+  using: "node24"
   main: "dist/index.js"

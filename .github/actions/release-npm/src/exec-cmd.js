@@ -8,6 +8,6 @@ export async function execCmd(cmd, options) {
     });
   } catch (error) {
     const msg = error.stderr?.toString();
-    throw new Error(msg);
+    throw new Error(msg, { cause: error });
   }
 }
