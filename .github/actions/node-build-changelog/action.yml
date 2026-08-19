@@ -29,7 +29,7 @@ runs:
   steps:
     - name: "Build Changelog"
       id: changelog
-      uses: mikepenz/release-changelog-builder-action@v5
+      uses: mikepenz/release-changelog-builder-action@v6
       with:
         token: ${{ inputs.token }}
         fromTag: ${{ inputs.fromTag }}
