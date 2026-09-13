@@ -5,15 +5,11 @@ on:
       build_script:
         description: "Build script to be executed"
         type: string
-        default: 'npm run build'
+        default: "rman build"
       workspace:
         description: "The default working directory on the runner for steps, and the default location of your repository when using the checkout action"
         type: string
         default: ${{ github.workspace }}
-      npm-publish:
-        description: "Determines if packages will be published to npm registry"
-        type: string
-        default: 'true'
       node-version:
         description: "NodeJS version"
         type: string
@@ -30,65 +26,65 @@ on:
         description: "Path which cache will be restored"
         type: string
         required: false
-      dockerize:
-        description: "Determines if docker image will be created"
-        type: string
-        default: 'true'
-      docker-cwd:
-        description: "Working directory for docker build"
-        type: string
-      docker-platforms:
-        description: "Comma seperated target platforms for Docker images"
-        type: string
-        default: 'linux/amd64'
       stage-repository:
         description: "Git repository for stage files"
         type: string
       stage-repository-branch:
         description: "Git repository for stage files"
         type: string
-        default: 'main'
+        default: "main"
       stage-files:
         description: "<cr> delimited pairing of <Package name=Stage files>"
-        type: string
-      image-files:
-        description: "<cr> delimited pairing of <Package name=Image file name>"
-        type: string
-      ignore-packages:
-        description: "Comma separated list of packages to be ignored"
         type: string
     secrets:
       PERSONAL_ACCESS_TOKEN:
         description: "Github personal access token"
         required: true
       NPM_TOKEN:
-        description: "Access token for npm.pkg.github.com repository"
+        description: "npmjs.org auth token - omit entirely once the package is registered as an npm Trusted Publisher (OIDC); npm.pkg.github.com auth always uses PERSONAL_ACCESS_TOKEN regardless"
         required: false
       DOCKERHUB_NAMESPACE:
-        description: "Dockerhub namespace. Required if 'stage-repository' defined"
+        description: "Dockerhub namespace. Required if 'stage-repository' defined, or a bare (no \"/\") publish.docker.image is used"
         required: false
       DOCKERHUB_USERNAME:
-        description: "Dockerhub username. Required if 'dockerize' is set true"
+        description: "Dockerhub username. Required if any package's .rmanrc \"publish.target\" includes \"docker\""
         required: false
       DOCKERHUB_PASS:
-        description: "Dockerhub password. Required if 'dockerize' is set true"
+        description: "Dockerhub password. Required if any package's .rmanrc \"publish.target\" includes \"docker\""
         required: false
+
+permissions:
+  id-token: write # npm Trusted Publishing (OIDC) - also needed on the CALLER workflow's own job
+  contents: write # rman version --push, and the GitHub Release itself
 
 jobs:
   release:
     name: "Release"
     runs-on: ubuntu-latest
+    env:
+      # Pinned deliberately, not exposed as a workflow input - this workflow's own steps depend on
+      # specific rman behavior ("version --yes", the "publish.docker" .rmanrc schema), so bumping
+      # it is a maintenance decision made here, not something a consumer repo should be able to
+      # drift independently by passing a different value.
+      RMAN_VERSION: "1.0.7"
     outputs:
-      packages: ${{ steps.environment.outputs.packages }}
+      packages: ${{ steps.list.outputs.packages }}
+      bumped: ${{ steps.changed.outputs.count != '0' }}
 
     steps:
       - name: "Setup Environment"
         uses: panates/gh-setup-node@v1
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          fetch-depth: 100
+          fetch-depth: 0 # rman's own tag/changelog detection needs full history, not just the last N commits
           node-version: ${{ inputs.node-version }}
           github-registries: ${{ inputs.github-registries }}
+
+      - name: "Configure git identity"
+        working-directory: ${{ inputs.workspace }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: "Restore Cache"
         if: ${{ inputs.cache-key != '' && inputs.cache-path != '' }}
@@ -98,93 +94,122 @@ jobs:
           key: ${{ inputs.cache-key }}
 
       - name: "Print Info"
+        working-directory: ${{ inputs.workspace }}
         run: |
-          echo "=== NODE / NPM ==="
-          node -v
-          npm -v
-          
+          echo "=== rman info ===" # Node + whichever package manager .rmanrc actually configures
+          npx --yes "rman@$RMAN_VERSION" info
+
           echo "=== WORKFLOW ==="
           echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
           echo "GITHUB_WORKFLOW_REF=$GITHUB_WORKFLOW_REF"
           echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
-          
-          echo "=== NPM FULL CONFIG ==="
-          npm config list
 
           echo "=== RESTORED CACHE ==="
           ls -R "${{ inputs.cache-path }}" 2>/dev/null || echo "Cache path not found"
 
-      - name: "Scan Environment"
-        id: environment
-        uses: panates/gh-repository-info@v1
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-
-      - name: "Check git tag"
+      - name: "What changed"
+        id: changed
+        working-directory: ${{ inputs.workspace }}
         run: |
-          if [ -z "${{ steps.environment.outputs.lastTag }}" ]; then
-            echo "Error: No git tag found."
-            exit 1
-          fi
+          json=$(npx --yes "rman@$RMAN_VERSION" changed --json)
+          {
+            echo "json=$json"
+            echo "count=$(echo "$json" | jq 'length')"
+            echo "names=$(echo "$json" | jq -c '[.[].name]')"
+          } >> "$GITHUB_OUTPUT"
+          echo "$json"
 
-      - name: "Build Changelog"
-        id: changelog
-        uses: panates/github-actions/.github/actions/node-build-changelog@v1
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          fromTag: ${{ steps.environment.outputs.prevSha }}
-          toTag: ${{ steps.environment.outputs.lastSha }}
-
-      - name: "Print changelog"
+      - name: "Version"
+        if: ${{ steps.changed.outputs.count != '0' }}
+        working-directory: ${{ inputs.workspace }}
         run: |
-          cat COMMIT_CHANGELOG.md
+          # Severity always comes from rman's own auto-detection (conventional-commit prefixes,
+          # a "Release-As: patch|minor|major" commit-body footer to force a one-off exception) -
+          # never a static override here, which would apply identically to every future run
+          # regardless of what actually changed. Excluding a specific package from the release
+          # entirely is .rmanrc "release.skip", not a workflow input either - see docs/node-release.md.
+          npx --yes "rman@$RMAN_VERSION" version --yes --changelog --push --allow-branch main
 
-      - name: "Build Packages"
+      - name: "Capture release tag"
+        if: ${{ steps.changed.outputs.count != '0' }}
+        id: tag
+        working-directory: ${{ inputs.workspace }}
+        run: |
+          tag=$(git tag --points-at HEAD | head -n1)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Released tag: $tag"
+
+      - name: "Build"
+        if: ${{ steps.changed.outputs.count != '0' }}
+        working-directory: ${{ inputs.workspace }}
         shell: bash
         run: |
           ${{ inputs.build_script }}
 
-      - name: "Publish Npm Packages"
-        if: ${{ steps.environment.outputs.npmPackages && inputs.npm-publish == 'true'}}
-        uses: panates/github-actions/.github/actions/release-npm@v1
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          npm-token: ${{ secrets.NPM_TOKEN }}
-          workspace: ${{ inputs.workspace }}
-          packages: ${{ steps.environment.outputs.packages }}
-          github-registries: ${{ inputs.github-registries }}
-          ignore-packages: ${{ inputs.ignore-packages }}
+      - name: "Release notes"
+        if: ${{ steps.changed.outputs.count != '0' }}
+        working-directory: ${{ inputs.workspace }}
+        run: |
+          args=()
+          for n in $(echo '${{ steps.changed.outputs.names }}' | jq -r '.[]'); do
+            args+=(--scope "$n")
+          done
+          npx --yes "rman@$RMAN_VERSION" changelog "${args[@]}" | tee RELEASE_NOTES.md
 
-      - name: "Build Docker Images"
-        if: ${{  steps.environment.outputs.dockerPackages && inputs.dockerize == 'true'}}
-        uses: panates/github-actions/.github/actions/release-docker@v1
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          workspace: ${{ inputs.workspace }}
-          packages: ${{ steps.environment.outputs.packages }}
-          platforms: ${{ inputs.docker-platforms }}
-          dockerhub-namespace: ${{ secrets.DOCKERHUB_NAMESPACE }}
-          docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
-          docherhub-password: ${{ secrets.DOCKERHUB_PASS }}
-          image-files: ${{ inputs.image-files }}
-          cwd: ${{ inputs.docker-cwd }}
-          cache-path: ${{ inputs.cache-path }}
-          ignore-packages: ${{ inputs.ignore-packages }}
+      - name: "Ensure npm supports Trusted Publishing (OIDC)"
+        if: ${{ steps.changed.outputs.count != '0' }}
+        run: npm install -g npm@latest
+
+      - name: "Configure npm auth"
+        if: ${{ steps.changed.outputs.count != '0' }}
+        working-directory: ${{ inputs.workspace }}
+        run: |
+          # Only written when actually given - a package with neither line present, and no
+          # NPM_TOKEN, falls through to npm's own OIDC Trusted Publishing (see docs/node-release.md).
+          if [ -n "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+          fi
+          if [ -n "${{ inputs.github-registries }}" ]; then
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.PERSONAL_ACCESS_TOKEN }}" >> ~/.npmrc
+          fi
+
+      - name: "Publish"
+        if: ${{ steps.changed.outputs.count != '0' }}
+        working-directory: ${{ inputs.workspace }}
+        env:
+          DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_NAMESPACE }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          # No --target here - each package's own .rmanrc "publish.target" is the single source of
+          # truth for whether it goes to npm, docker, both, or neither (default ["npm"]). Disabling
+          # a target for one run would just be a second, workflow-level place that decision could
+          # live - forcing it into .rmanrc keeps it in one place.
+          npx --yes "rman@$RMAN_VERSION" publish --yes
+
+      - name: "List packages"
+        id: list
+        working-directory: ${{ inputs.workspace }}
+        run: |
+          json=$(npx --yes "rman@$RMAN_VERSION" list --json)
+          echo "packages=$json" >> "$GITHUB_OUTPUT"
 
       - name: "Create GitHub Release"
+        if: ${{ steps.changed.outputs.count != '0' }}
         id: create_release
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          tag: ${{ steps.environment.outputs.lastTag }}
-          bodyFile: "COMMIT_CHANGELOG.md"
+          tag: ${{ steps.tag.outputs.tag }}
+          bodyFile: "RELEASE_NOTES.md"
           allowUpdates: true
           draft: false
           prerelease: false
           replacesArtifacts: true
 
   stage_deploy:
-    if: ${{ inputs.stage-repository != '' }}
+    if: ${{ inputs.stage-repository != '' && needs.release.outputs.bumped == 'true' }}
     name: Stage Deploy
     needs: release
     runs-on: ubuntu-latest
@@ -197,14 +222,11 @@ jobs:
           ref: ${{ inputs.stage-repository-branch }}
 
       - name: Update image in deployment yaml
-        uses: panates/github-actions/.github/actions/stage-deploy@v1
+        uses: panates/github-actions/.github/actions/stage-deploy@v2
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           packages: ${{ needs.release.outputs.packages }}
           dockerhub-namespace: ${{ secrets.DOCKERHUB_NAMESPACE }}
           docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
           docherhub-password: ${{ secrets.DOCKERHUB_PASS }}
-          image-files: ${{ inputs.image-files }}
           stage-files: ${{ inputs.stage-files }}
-
-

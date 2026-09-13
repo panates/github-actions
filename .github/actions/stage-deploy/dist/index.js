@@ -26849,7 +26849,9 @@ var import_ansi_colors = __toESM(require_ansi_colors(), 1);
 var import_yaml = __toESM(require_dist(), 1);
 async function run() {
   const packages = JSON.parse(getInput("packages", { required: true }));
-  const dockerPackages = packages.filter((p) => p.isDockerApp);
+  const dockerPackages = packages.filter(
+    (p) => p.publishTargets?.includes("docker") && p.docker?.image
+  );
   if (dockerPackages.length === 0) {
     info("No docker packages found. Skipping");
     return;
@@ -26872,15 +26874,9 @@ async function run() {
     info("  " + import_ansi_colors.default.yellow(a[0]) + " = " + import_ansi_colors.default.magenta(a[1]));
     return acc;
   }, {});
-  info("imageFiles");
-  const imageFilesMap = getInput("image-files", {
-    required: true
-  }).trim().split(/\s*\n\s*/).reduce((acc, item) => {
-    const a = item.split(/\s*=\s*/);
-    acc[a[0]] = a[1];
-    info("  " + import_ansi_colors.default.yellow(a[0]) + " = " + import_ansi_colors.default.magenta(a[1]));
-    return acc;
-  }, {});
+  function resolveImageRef(image) {
+    return image.includes("/") ? image : `${dockerhubNamespace}/${image}`;
+  }
   try {
     info(import_ansi_colors.default.yellow(`\u{1F510} Logging into dockerhub..`));
     let r = await fetch(`https://hub.docker.com/v2/users/login/`, {
@@ -26901,22 +26897,21 @@ async function run() {
     const dockerHubToken = (await r.json()).token;
     const okItems = [];
     for (const pkg of dockerPackages) {
-      const imageName = imageFilesMap[pkg.name];
-      if (!imageName) {
-        setFailed(`No image file mapping found for ${pkg.name}`);
-        continue;
-      }
       const stageFile = stageFilesMap[pkg.name];
       if (!stageFile) {
         setFailed(`No stage file mapping found for ${pkg.name}`);
         continue;
       }
-      const imageUrl = `${dockerhubNamespace}/${imageName}:${pkg.version}`;
+      const imageRef = resolveImageRef(pkg.docker.image);
+      const slashIdx = imageRef.indexOf("/");
+      const imageNamespace = imageRef.slice(0, slashIdx);
+      const imageName = imageRef.slice(slashIdx + 1);
+      const imageUrl = `${imageRef}:${pkg.version}`;
       info("stageFile: " + stageFile);
       info("imageUrl: " + imageUrl);
       info(import_ansi_colors.default.yellow(`\u{1F50D} Checking if image exists in DockerHub..`));
       r = await fetch(
-        `https://hub.docker.com/v2/repositories/${dockerhubNamespace}/${imageName}/tags/${pkg.version}/`,
+        `https://hub.docker.com/v2/repositories/${imageNamespace}/${imageName}/tags/${pkg.version}/`,
         {
           method: "GET",
           headers: {

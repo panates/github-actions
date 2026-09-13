@@ -5,9 +5,11 @@ import colors from "ansi-colors";
 import yaml from "yaml";
 
 async function run() {
-  /** Read packages inputs */
+  /** Read packages input - "rman list --json" output */
   const packages = JSON.parse(core.getInput("packages", { required: true }));
-  const dockerPackages = packages.filter((p) => p.isDockerApp);
+  const dockerPackages = packages.filter(
+    (p) => p.publishTargets?.includes("docker") && p.docker?.image,
+  );
   if (dockerPackages.length === 0) {
     core.info("No docker packages found. Skipping");
     return;
@@ -35,19 +37,13 @@ async function run() {
       core.info("  " + colors.yellow(a[0]) + " = " + colors.magenta(a[1]));
       return acc;
     }, {});
-  core.info("imageFiles");
-  const imageFilesMap = core
-    .getInput("image-files", {
-      required: true,
-    })
-    .trim()
-    .split(/\s*\n\s*/)
-    .reduce((acc, item) => {
-      const a = item.split(/\s*=\s*/);
-      acc[a[0]] = a[1];
-      core.info("  " + colors.yellow(a[0]) + " = " + colors.magenta(a[1]));
-      return acc;
-    }, {});
+
+  /** Same bare-vs-namespaced rule DockerPublishService itself uses - a "docker.image" already
+   *  containing a "/" is a full reference, used verbatim; a bare name is prefixed with the shared
+   *  dockerhub-namespace. */
+  function resolveImageRef(image) {
+    return image.includes("/") ? image : `${dockerhubNamespace}/${image}`;
+  }
 
   try {
     /** Login to docker */
@@ -73,24 +69,23 @@ async function run() {
     const okItems = [];
 
     for (const pkg of dockerPackages) {
-      const imageName = imageFilesMap[pkg.name];
-      if (!imageName) {
-        core.setFailed(`No image file mapping found for ${pkg.name}`);
-        continue;
-      }
       const stageFile = stageFilesMap[pkg.name];
       if (!stageFile) {
         core.setFailed(`No stage file mapping found for ${pkg.name}`);
         continue;
       }
 
-      const imageUrl = `${dockerhubNamespace}/${imageName}:${pkg.version}`;
+      const imageRef = resolveImageRef(pkg.docker.image);
+      const slashIdx = imageRef.indexOf("/");
+      const imageNamespace = imageRef.slice(0, slashIdx);
+      const imageName = imageRef.slice(slashIdx + 1);
+      const imageUrl = `${imageRef}:${pkg.version}`;
       core.info("stageFile: " + stageFile);
       core.info("imageUrl: " + imageUrl);
 
       core.info(colors.yellow(`🔍 Checking if image exists in DockerHub..`));
       r = await fetch(
-        `https://hub.docker.com/v2/repositories/${dockerhubNamespace}/${imageName}/tags/${pkg.version}/`,
+        `https://hub.docker.com/v2/repositories/${imageNamespace}/${imageName}/tags/${pkg.version}/`,
         {
           method: "GET",
           headers: {

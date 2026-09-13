@@ -4,12 +4,16 @@ on:
     inputs:
       qc_script:
         type: string
-        description: "QC script to be executed"
+        description: "QC script to be executed - e.g. \"rman run qc --changed-since origin/main\" to only lint/test packages that actually changed"
         default: 'npm run qc'
       node-version:
         description: "NodeJS version"
         type: string
         default: ""
+      rman-ci:
+        description: "Use \"npx rman ci\" (a clean install across every workspace) instead of \"npm install --only=dev\""
+        type: string
+        default: "false"
     secrets:
       PERSONAL_ACCESS_TOKEN:
         description: "Github personal access token"
@@ -23,6 +27,9 @@ jobs:
   qc:
     name: Quality Check
     runs-on: ubuntu-latest
+    env:
+      # Pinned deliberately, not a workflow input - see node-release.yaml's own RMAN_VERSION.
+      RMAN_VERSION: "1.0.7"
     steps:
       - uses: actions/checkout@v7
 
@@ -37,7 +44,11 @@ jobs:
 
       - name: Install dev dependencies
         run: |
-          npm install --only=dev --no-save
+          if [ "${{ inputs.rman-ci }}" = "true" ]; then
+            npx --yes "rman@$RMAN_VERSION" ci
+          else
+            npm install --only=dev --no-save
+          fi
 
       - name: Run QC Tests
         run: ${{ inputs.qc_script }}
