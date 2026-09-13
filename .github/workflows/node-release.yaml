@@ -126,8 +126,9 @@ jobs:
           # Severity always comes from rman's own auto-detection (conventional-commit prefixes,
           # a "Release-As: patch|minor|major" commit-body footer to force a one-off exception) -
           # never a static override here, which would apply identically to every future run
-          # regardless of what actually changed. Excluding a specific package from the release
-          # entirely is .rmanrc "release.skip", not a workflow input either - see docs/node-release.md.
+          # regardless of what actually changed. Excluding a package from publish/changelog
+          # entirely is .rmanrc "publish.skip" (version itself never consults it), not a workflow
+          # input either - see docs/node-release.md.
           npx --yes "rman@$RMAN_VERSION" version --yes --changelog --push --allow-branch main
 
       - name: "Capture release tag"
@@ -150,7 +151,9 @@ jobs:
         if: ${{ steps.changed.outputs.count != '0' }}
         working-directory: ${{ inputs.workspace }}
         run: |
-          args=()
+          # --include-skipped: every bumped package belongs in the release notes, even one that's
+          # .rmanrc "publish.skip" - it just got its own version bump, the same as any other.
+          args=(--include-skipped)
           for n in $(echo '${{ steps.changed.outputs.names }}' | jq -r '.[]'); do
             args+=(--scope "$n")
           done

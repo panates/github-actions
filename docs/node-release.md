@@ -126,10 +126,11 @@ keeps using `PERSONAL_ACCESS_TOKEN` regardless, Trusted Publishing doesn't apply
     "publish.target"` - there's no separate `image-files`/Dockerfile-presence detection or
     `npm-publish`/`dockerize` toggle to keep in sync with it. A workflow-level override would just
     be a second, conflicting place that decision could live.
-  - Excluding a package from the release pipeline entirely (version/changelog/publish, permanently
-    - e.g. it's released through some other process) is `.rmanrc "release": { "skip": true }`, set
-    in *that package's own* `.rmanrc` - see
-    [rman's docs](https://github.com/panates/rman/blob/main/docs/cli/version.md#excluding-a-package-entirely-rmanrc-releaseskip).
+  - Excluding a package from publish (npm and Docker) and changelog generation permanently - e.g.
+    it's released through some other process - is `.rmanrc "publish": { "skip": true }`, set in
+    *that package's own* `.rmanrc` (`version` itself never consults it - the package still bumps
+    normally) - see
+    [rman's docs](https://github.com/panates/rman/blob/main/docs/cli/publish.md#excluding-a-package-entirely-rmanrc-publishskip).
     A repo-wide `ignore-packages` list in the *workflow* would be a second place that same fact
     could live, out of sync with the package's own directory.
   - A genuine prerelease channel (a permanent `--preid` for everything a given branch/workflow
