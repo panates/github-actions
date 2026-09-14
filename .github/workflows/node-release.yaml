@@ -62,11 +62,12 @@ jobs:
     name: "Release"
     runs-on: ubuntu-latest
     env:
-      # Pinned deliberately, not exposed as a workflow input - this workflow's own steps depend on
-      # specific rman behavior ("version --yes", the "publish.docker" .rmanrc schema), so bumping
-      # it is a maintenance decision made here, not something a consumer repo should be able to
-      # drift independently by passing a different value.
-      RMAN_VERSION: "1.0.7"
+      # Floating major, not exposed as a workflow input - picks up every 1.x fix/feature
+      # automatically (trusting semver's own major-version breaking-change boundary), without
+      # needing a coordinated github-actions release for each one, while still never jumping to a
+      # 2.x that could change the CLI behavior these steps depend on. Bumping the major is a
+      # maintenance decision made here, not something a consumer repo should drift independently.
+      RMAN_VERSION: "1"
     outputs:
       packages: ${{ steps.list.outputs.packages }}
       bumped: ${{ steps.changed.outputs.count != '0' }}

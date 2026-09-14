@@ -28,8 +28,8 @@ jobs:
     name: Quality Check
     runs-on: ubuntu-latest
     env:
-      # Pinned deliberately, not a workflow input - see node-release.yaml's own RMAN_VERSION.
-      RMAN_VERSION: "1.0.7"
+      # Floating major, not a workflow input - see node-release.yaml's own RMAN_VERSION.
+      RMAN_VERSION: "1"
     steps:
       - uses: actions/checkout@v7
 

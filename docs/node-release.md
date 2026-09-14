@@ -136,9 +136,11 @@ keeps using `PERSONAL_ACCESS_TOKEN` regardless, Trusted Publishing doesn't apply
   - A genuine prerelease channel (a permanent `--preid` for everything a given branch/workflow
     releases) isn't something this workflow has a documented pattern for yet - add it deliberately,
     with its own entry-workflow template, if/when a real need for one comes up.
-  - The `rman` version this workflow runs is pinned internally (`RMAN_VERSION` in
-    `node-release.yaml` itself), not exposed as an input - these steps depend on specific rman
-    behavior, so bumping it is a maintenance decision made here, released as a new `github-actions`
-    version, not something a consumer repo should be able to drift independently.
+  - The `rman` version this workflow runs is a floating major (`RMAN_VERSION` in
+    `node-release.yaml`/`node-qc.yaml` themselves, currently `"1"`), not exposed as an input -
+    every `1.x` fix/feature is picked up automatically, trusting semver's own major-version
+    breaking-change boundary, without needing a coordinated `github-actions` release for each one.
+    Bumping the major is a deliberate maintenance decision made here, not something a consumer
+    repo should be able to drift independently.
 - See [rman's own `publish` docs](https://github.com/panates/rman/blob/main/docs/cli/publish.md#docker-publishing-publishdocker)
   for the full `.rmanrc "publish.docker"` schema (platforms, build contexts, build args, ...).
