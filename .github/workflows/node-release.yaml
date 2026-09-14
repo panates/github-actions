@@ -120,6 +120,25 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "$json"
 
+      - name: "Release notes"
+        if: ${{ steps.changed.outputs.count != '0' }}
+        working-directory: ${{ inputs.workspace }}
+        run: |
+          # Deliberately BEFORE "Version": "rman changelog" (no explicit --from) auto-detects each
+          # package's own boundary from its currently-published npm version, falling back to its
+          # existing CHANGELOG.md's own last-modifying commit, then to "not yet pushed" commits for
+          # a first-ever release - all of which only resolve correctly against the PRE-bump state.
+          # Run this after "Version" instead, and every one of those signals is already stale (the
+          # npm version won't be bumped yet either way, but the tag now exists and everything's
+          # already pushed) - "not yet pushed" would resolve to nothing for every package, npm or
+          # Docker alike, not just Docker-only ones. --include-skipped: every bumped package
+          # belongs in the release notes, even one that's .rmanrc "publish.skip".
+          args=(--include-skipped)
+          for n in $(echo '${{ steps.changed.outputs.names }}' | jq -r '.[]'); do
+            args+=(--scope "$n")
+          done
+          npx --yes "rman@$RMAN_VERSION" changelog "${args[@]}" | tee RELEASE_NOTES.md
+
       - name: "Version"
         if: ${{ steps.changed.outputs.count != '0' }}
         working-directory: ${{ inputs.workspace }}
@@ -129,7 +148,9 @@ jobs:
           # never a static override here, which would apply identically to every future run
           # regardless of what actually changed. Excluding a package from publish/changelog
           # entirely is .rmanrc "publish.skip" (version itself never consults it), not a workflow
-          # input either - see docs/node-release.md.
+          # input either - see docs/node-release.md. Its own --changelog fold-in is unaffected by
+          # the ordering note above - it passes each package's boundary explicitly, computed from
+          # the very same plan "What changed" already ran.
           npx --yes "rman@$RMAN_VERSION" version --yes --changelog --push --allow-branch main
 
       - name: "Capture release tag"
@@ -147,18 +168,6 @@ jobs:
         shell: bash
         run: |
           ${{ inputs.build_script }}
-
-      - name: "Release notes"
-        if: ${{ steps.changed.outputs.count != '0' }}
-        working-directory: ${{ inputs.workspace }}
-        run: |
-          # --include-skipped: every bumped package belongs in the release notes, even one that's
-          # .rmanrc "publish.skip" - it just got its own version bump, the same as any other.
-          args=(--include-skipped)
-          for n in $(echo '${{ steps.changed.outputs.names }}' | jq -r '.[]'); do
-            args+=(--scope "$n")
-          done
-          npx --yes "rman@$RMAN_VERSION" changelog "${args[@]}" | tee RELEASE_NOTES.md
 
       - name: "Ensure npm supports Trusted Publishing (OIDC)"
         if: ${{ steps.changed.outputs.count != '0' }}
