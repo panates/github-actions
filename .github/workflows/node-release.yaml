@@ -227,7 +227,6 @@ jobs:
       - name: Update image in deployment yaml
         uses: panates/github-actions/.github/actions/stage-deploy@v2
         with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           packages: ${{ needs.release.outputs.packages }}
           dockerhub-namespace: ${{ secrets.DOCKERHUB_NAMESPACE }}
           docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
