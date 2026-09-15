@@ -70,7 +70,7 @@ jobs:
       RMAN_VERSION: "1"
     outputs:
       packages: ${{ steps.list.outputs.packages }}
-      bumped: ${{ steps.changed.outputs.count != '0' }}
+      released: ${{ steps.publish.outputs.count != '0' }}
 
     steps:
       - name: "Setup Environment"
@@ -108,36 +108,37 @@ jobs:
           echo "=== RESTORED CACHE ==="
           ls -R "${{ inputs.cache-path }}" 2>/dev/null || echo "Cache path not found"
 
+      - name: "Docker login"
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS }}
+        run: |
+          # Up here, ahead of "Version", so bad credentials surface before anything has been
+          # written: "Version" is the first step that mutates the repository, and a failure after it
+          # leaves a bump and a tag already pushed with nothing released.
+          # It's needed this early anyway - "What to publish" decides whether a Docker package is
+          # already released with "docker manifest inspect", which reads the local credentials.
+          # Unauthenticated, a *private* image reads as "no such manifest", so an already-published
+          # version would look unpublished and the whole pipeline would run to push it again.
+          # A no-op for a repo that ships no Docker images and passes no credentials.
+          if [ -n "$DOCKERHUB_USERNAME" ]; then
+            echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No DOCKERHUB_USERNAME - skipping."
+          fi
+
       - name: "What changed"
         id: changed
         working-directory: ${{ inputs.workspace }}
         run: |
+          # Only decides whether a NEW version number is warranted, nothing else. It answers a
+          # commit-driven question ("what landed since each package's last release"), so it is
+          # correctly empty whenever the bump already happened - a version cut locally and merged
+          # in, or an earlier run of this workflow. Gating the release on it would skip exactly
+          # those cases; that gate is "What to publish" below.
           json=$(npx --yes "rman@$RMAN_VERSION" changed --json)
-          {
-            echo "json=$json"
-            echo "count=$(echo "$json" | jq 'length')"
-            echo "names=$(echo "$json" | jq -c '[.[].name]')"
-          } >> "$GITHUB_OUTPUT"
+          echo "count=$(echo "$json" | jq 'length')" >> "$GITHUB_OUTPUT"
           echo "$json"
-
-      - name: "Release notes"
-        if: ${{ steps.changed.outputs.count != '0' }}
-        working-directory: ${{ inputs.workspace }}
-        run: |
-          # Deliberately BEFORE "Version": "rman changelog" (no explicit --from) auto-detects each
-          # package's own boundary from its currently-published npm version, falling back to its
-          # existing CHANGELOG.md's own last-modifying commit, then to "not yet pushed" commits for
-          # a first-ever release - all of which only resolve correctly against the PRE-bump state.
-          # Run this after "Version" instead, and every one of those signals is already stale (the
-          # npm version won't be bumped yet either way, but the tag now exists and everything's
-          # already pushed) - "not yet pushed" would resolve to nothing for every package, npm or
-          # Docker alike, not just Docker-only ones. --include-skipped: every bumped package
-          # belongs in the release notes, even one that's .rmanrc "publish.skip".
-          args=(--include-skipped)
-          for n in $(echo '${{ steps.changed.outputs.names }}' | jq -r '.[]'); do
-            args+=(--scope "$n")
-          done
-          npx --yes "rman@$RMAN_VERSION" changelog "${args[@]}" | tee RELEASE_NOTES.md
 
       - name: "Version"
         if: ${{ steps.changed.outputs.count != '0' }}
@@ -148,33 +149,24 @@ jobs:
           # never a static override here, which would apply identically to every future run
           # regardless of what actually changed. Excluding a package from publish/changelog
           # entirely is .rmanrc "publish.skip" (version itself never consults it), not a workflow
-          # input either - see docs/node-release.md. Its own --changelog fold-in is unaffected by
-          # the ordering note above - it passes each package's boundary explicitly, computed from
-          # the very same plan "What changed" already ran.
-          npx --yes "rman@$RMAN_VERSION" version --yes --changelog --push --allow-branch main
-
-      - name: "Capture release tag"
-        if: ${{ steps.changed.outputs.count != '0' }}
-        id: tag
-        working-directory: ${{ inputs.workspace }}
-        run: |
-          tag=$(git tag --points-at HEAD | head -n1)
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "Released tag: $tag"
+          # input either - see docs/node-release.md. No --changelog flag here either, on purpose -
+          # set .rmanrc "version.changelog": true if you want it folded into every bump commit, so
+          # a manual local "rman version" run (see docs/node-release.md) behaves identically to
+          # this one, rather than a flag someone can forget on either side.
+          npx --yes "rman@$RMAN_VERSION" version --yes --push --allow-branch main
 
       - name: "Build"
-        if: ${{ steps.changed.outputs.count != '0' }}
         working-directory: ${{ inputs.workspace }}
         shell: bash
         run: |
+          # Unconditional: a package may need its in-repo dependencies built even on a run that
+          # ends up publishing nothing, and "Publish" below decides for itself what is actually due.
           ${{ inputs.build_script }}
 
       - name: "Ensure npm supports Trusted Publishing (OIDC)"
-        if: ${{ steps.changed.outputs.count != '0' }}
         run: npm install -g npm@latest
 
       - name: "Configure npm auth"
-        if: ${{ steps.changed.outputs.count != '0' }}
         working-directory: ${{ inputs.workspace }}
         run: |
           # Only written when actually given - a package with neither line present, and no
@@ -187,7 +179,7 @@ jobs:
           fi
 
       - name: "Publish"
-        if: ${{ steps.changed.outputs.count != '0' }}
+        id: publish
         working-directory: ${{ inputs.workspace }}
         env:
           DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_NAMESPACE }}
@@ -199,6 +191,22 @@ jobs:
           # truth for whether it goes to npm, docker, both, or neither (default ["npm"]). Disabling
           # a target for one run would just be a second, workflow-level place that decision could
           # live - forcing it into .rmanrc keeps it in one place.
+          #
+          # This also cuts the GitHub Release, for a repo whose root .rmanrc lists "github" as a
+          # target: one release per run, named after the repository's own release tag, with notes
+          # rman generates itself - bounded by the previous release and headed with each package's
+          # own version. There is deliberately no separate release step here: generating notes
+          # before the bump can't know the version being released, and generating them after can't
+          # find the boundary, so neither ordering is right from a workflow.
+          #
+          # The plan is computed first only to record what this run releases: "publish" itself
+          # already publishes nothing when nothing is due, so this is not a gate - it's the signal
+          # "stage_deploy" needs to stay off the manifest repository on a run that released nothing,
+          # and it puts the reason in the log when a release doesn't happen.
+          json=$(npx --yes "rman@$RMAN_VERSION" publish --dry-run --json)
+          echo "$json"
+          echo "count=$(echo "$json" | jq '[.[] | select(.status == "publish")] | length')" >> "$GITHUB_OUTPUT"
+
           npx --yes "rman@$RMAN_VERSION" publish --yes
 
       - name: "List packages"
@@ -208,21 +216,8 @@ jobs:
           json=$(npx --yes "rman@$RMAN_VERSION" list --json)
           echo "packages=$json" >> "$GITHUB_OUTPUT"
 
-      - name: "Create GitHub Release"
-        if: ${{ steps.changed.outputs.count != '0' }}
-        id: create_release
-        uses: ncipollo/release-action@v1
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          tag: ${{ steps.tag.outputs.tag }}
-          bodyFile: "RELEASE_NOTES.md"
-          allowUpdates: true
-          draft: false
-          prerelease: false
-          replacesArtifacts: true
-
   stage_deploy:
-    if: ${{ inputs.stage-repository != '' && needs.release.outputs.bumped == 'true' }}
+    if: ${{ inputs.stage-repository != '' && needs.release.outputs.released == 'true' }}
     name: Stage Deploy
     needs: release
     runs-on: ubuntu-latest

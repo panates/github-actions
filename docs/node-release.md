@@ -5,9 +5,9 @@ powered by [`rman`](https://github.com/panates/rman):
 
 - Bumps versions from conventional-commit messages (`rman version`)
 - Generates changelogs per package (`rman changelog`)
+- Cuts the GitHub Release, with notes covering everything that shipped under its tag
 - Publishes to npm and/or builds+pushes Docker images (`rman publish`), per package `.rmanrc`
   `"publish.target"` config
-- Creates the GitHub Release
 - Optionally updates a separate "stage" deployment repository
 
 `v1` (the previous, `gh-repository-info`-based pipeline) keeps working unchanged for repos that
@@ -49,7 +49,18 @@ jobs:
 Your repo needs a valid `.rmanrc`/`package.json#rman` (npm/yarn `workspaces` for a monorepo) - see
 [rman's own docs](https://github.com/panates/rman#readme). Nothing else is required for npm
 publishing; Docker publishing additionally needs each docker-shipping package's own
-`"publish.target": ["docker"]` + `"publish.docker"` config (image name, platforms, ...).
+`"publish.target": ["docker"]` + `"publish.docker"` config (image name, platforms, ...). Two
+repo-level settings are worth adding to your **root** `.rmanrc` right away:
+
+```jsonc
+{
+  "version": { "changelog": true },          // fold CHANGELOG.md into every bump commit
+  "publish": { "target": ["npm", "github"] } // also cut a GitHub Release for each release
+}
+```
+
+Neither is a workflow flag on purpose - they're standing policy, so a bump you run locally behaves
+exactly like one this workflow runs (see the Notes below).
 
 ---
 
@@ -98,21 +109,54 @@ keeps using `PERSONAL_ACCESS_TOKEN` regardless, Trusted Publishing doesn't apply
 
 ## 🧱 Workflow steps summary
 
-1. **Setup Environment** - checkout (full history) + Node, via `panates/gh-setup-node@v1`.
-2. **What changed** - `rman changed --json`; if nothing changed, every later step is skipped.
-3. **Version** - `rman version --yes --changelog --push`, severity auto-detected from commits.
-4. **Build** - `build_script` (default `rman run build`).
-5. **Release notes** - `rman changelog`, scoped to just the bumped packages.
+1. **Setup Environment** - checkout (full history **and tags**) + Node, via `panates/gh-setup-node@v1`.
+2. **Docker login** - ahead of everything that writes, so bad credentials surface before a version
+   has been bumped and pushed. A no-op without `DOCKERHUB_USERNAME`.
+3. **What changed** - `rman changed --json`. Only decides whether a *new version number* is
+   warranted; it is correctly empty when the bump already happened.
+4. **Version** - `rman version --yes --push`, severity auto-detected from commits. Runs only when
+   step 3 found something. Always ahead of the build: the published artifact carries whatever
+   version `package.json` held when it was built.
+5. **Build** - `build_script` (default `rman build`). Unconditional - a package may need its
+   in-repo dependencies built even on a run that publishes nothing.
 6. **Publish** - `rman publish --yes`, no `--target` filter - each package's own `.rmanrc
-   "publish.target"` decides npm/docker/both.
-7. **GitHub Release** - via `ncipollo/release-action`, body = the release notes from step 5.
-8. **Stage Deploy** (separate job, only if `stage-repository` is set) - updates the manifest repo's
-   deployment YAML with each Docker package's new image tag.
+   "publish.target"` decides npm/docker/github. This also cuts the GitHub Release. It publishes
+   only what is actually due, so there is no separate gate in front of it; the plan is printed
+   first purely to record what the run released (and to keep step 7 off a no-op run).
+7. **Stage Deploy** (separate job, only if `stage-repository` is set **and** something was actually
+   published) - updates the manifest repo's deployment YAML with each Docker package's new image tag.
+
+### Why `changed` is not the release signal
+
+`changed` answers "does anything need a *new version number*", which is commit-driven - so it is
+empty in exactly the cases where the bump already happened:
+
+| | `changed` | actually due to publish |
+| --- | --- | --- |
+| CI bumps the version itself | non-empty | yes |
+| Version bumped locally, merged in via a PR | **empty** | yes |
+| Nothing new since the last release | empty | no |
+| An earlier run's publish failed after the tag was pushed | **empty** | yes |
+
+So `changed` only ever decides whether to *bump*. What is due to publish is `rman publish`'s own
+question, answered per target against its own registry - and answered *after* the bump, since
+before it a release this very run is about to create still reads as "up-to-date".
 
 ## 📄 Notes
 
-- A push that changes nothing (no commits since the last release for any package) is a no-op -
-  nothing is built, published, or released.
+- A push with nothing left to release - no new commits *and* every target already holding the
+  current version - is a no-op: nothing is built, published, or released.
+- **GitHub Releases now come from `rman publish`**, not a separate step, so a repo that wants them
+  has to say so: `"publish": { "target": ["npm", "github"] }` in its **root** `.rmanrc`. One
+  release per run, named after the repository's own release tag, with notes rman generates itself -
+  bounded by the previous release and headed with each package's own version, which is what makes
+  it correct for a monorepo whose packages sit on different version lines. A workflow can't do
+  this: notes generated before the bump don't know the version being released, and notes generated
+  after it can't find the boundary any more.
+- **The tags have to reach CI.** Both the release tag and the boundary its notes are measured from
+  are read from git. A version bumped locally and pushed with a plain `git push` leaves its tags
+  behind - use `rman version --push`, which sends them. `rman publish` refuses to cut a release
+  whose tag it can't find rather than producing one covering the whole history.
 - **Deliberately *not* inputs here: `bump`, `preid`, `npm-publish`, `dockerize`, `rman-version`,
   `ignore-packages`.** Every one of these would be a static, workflow-level value applied
   identically to *every* future run - the wrong place for something that should vary per commit or
@@ -133,6 +177,10 @@ keeps using `PERSONAL_ACCESS_TOKEN` regardless, Trusted Publishing doesn't apply
     [rman's docs](https://github.com/panates/rman/blob/main/docs/cli/publish.md#excluding-a-package-entirely-rmanrc-publishskip).
     A repo-wide `ignore-packages` list in the *workflow* would be a second place that same fact
     could live, out of sync with the package's own directory.
+  - Whether a bump commit also folds in `CHANGELOG.md` updates is `.rmanrc "version.changelog"`,
+    not a `--changelog` flag this workflow passes - a standing policy, set once, behaves the same
+    whether `rman version` runs here or a developer runs it locally themselves ahead of a merge - a
+    flag is easy to forget on one side or the other and get inconsistent results.
   - A genuine prerelease channel (a permanent `--preid` for everything a given branch/workflow
     releases) isn't something this workflow has a documented pattern for yet - add it deliberately,
     with its own entry-workflow template, if/when a real need for one comes up.
