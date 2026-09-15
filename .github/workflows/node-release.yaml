@@ -192,13 +192,6 @@ jobs:
           # a target for one run would just be a second, workflow-level place that decision could
           # live - forcing it into .rmanrc keeps it in one place.
           #
-          # This also cuts the GitHub Release, for a repo whose root .rmanrc lists "github" as a
-          # target: one release per run, named after the repository's own release tag, with notes
-          # rman generates itself - bounded by the previous release and headed with each package's
-          # own version. There is deliberately no separate release step here: generating notes
-          # before the bump can't know the version being released, and generating them after can't
-          # find the boundary, so neither ordering is right from a workflow.
-          #
           # The plan is computed first only to record what this run releases: "publish" itself
           # already publishes nothing when nothing is due, so this is not a gate - it's the signal
           # "stage_deploy" needs to stay off the manifest repository on a run that released nothing,
@@ -208,6 +201,24 @@ jobs:
           echo "count=$(echo "$json" | jq '[.[] | select(.status == "publish")] | length')" >> "$GITHUB_OUTPUT"
 
           npx --yes "rman@$RMAN_VERSION" publish --yes
+
+      - name: "GitHub Release"
+        working-directory: ${{ inputs.workspace }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          # Unconditional, and deliberately not an input: a GitHub Release isn't somewhere a package
+          # ships to (that's .rmanrc "publish.target" - npm, Docker Hub, GitHub Packages), it's the
+          # repository's own record that a version shipped, and every repo wants that record. Making
+          # it opt-in would just mean some repos silently stop having one.
+          # It's a no-op when there's nothing new: the release is named after the tag "version"
+          # created, and a tag that already has a release reads "up-to-date".
+          # After "Publish", so a failed npm/docker push doesn't leave a release announcing code
+          # that never reached a registry. The notes rman generates are bounded by the previous
+          # release and headed with each package's own version - which is why this can't be a
+          # generic release action: before the bump the version isn't known, after the tag exists
+          # the boundary can't be found, and rman is the only thing here that knows both.
+          npx --yes "rman@$RMAN_VERSION" github-release --yes
 
       - name: "List packages"
         id: list
