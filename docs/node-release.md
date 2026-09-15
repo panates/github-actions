@@ -54,12 +54,11 @@ repo-level settings are worth adding to your **root** `.rmanrc` right away:
 
 ```jsonc
 {
-  "version": { "changelog": true },          // fold CHANGELOG.md into every bump commit
-  "publish": { "target": ["npm", "github"] } // also cut a GitHub Release for each release
+  "version": { "changelog": true } // fold CHANGELOG.md into every bump commit
 }
 ```
 
-Neither is a workflow flag on purpose - they're standing policy, so a bump you run locally behaves
+It is not a workflow flag on purpose - it's standing policy, so a bump you run locally behaves
 exactly like one this workflow runs (see the Notes below).
 
 ---
@@ -120,10 +119,13 @@ keeps using `PERSONAL_ACCESS_TOKEN` regardless, Trusted Publishing doesn't apply
 5. **Build** - `build_script` (default `rman build`). Unconditional - a package may need its
    in-repo dependencies built even on a run that publishes nothing.
 6. **Publish** - `rman publish --yes`, no `--target` filter - each package's own `.rmanrc
-   "publish.target"` decides npm/docker/github. This also cuts the GitHub Release. It publishes
-   only what is actually due, so there is no separate gate in front of it; the plan is printed
-   first purely to record what the run released (and to keep step 7 off a no-op run).
-7. **Stage Deploy** (separate job, only if `stage-repository` is set **and** something was actually
+   "publish.target"` decides npm and/or docker. It publishes only what is actually due, so there is
+   no separate gate in front of it; the plan is printed first purely to record what the run
+   released (and to keep step 8 off a no-op run).
+7. **GitHub Release** - `rman github-release --yes`. Unconditional, and after the publish so a
+   failed registry push doesn't leave a release announcing code that never arrived. A no-op when
+   the tag already has one.
+8. **Stage Deploy** (separate job, only if `stage-repository` is set **and** something was actually
    published) - updates the manifest repo's deployment YAML with each Docker package's new image tag.
 
 ### Why `changed` is not the release signal
@@ -146,17 +148,18 @@ before it a release this very run is about to create still reads as "up-to-date"
 
 - A push with nothing left to release - no new commits *and* every target already holding the
   current version - is a no-op: nothing is built, published, or released.
-- **GitHub Releases now come from `rman publish`**, not a separate step, so a repo that wants them
-  has to say so: `"publish": { "target": ["npm", "github"] }` in its **root** `.rmanrc`. One
-  release per run, named after the repository's own release tag, with notes rman generates itself -
-  bounded by the previous release and headed with each package's own version, which is what makes
-  it correct for a monorepo whose packages sit on different version lines. A workflow can't do
-  this: notes generated before the bump don't know the version being released, and notes generated
-  after it can't find the boundary any more.
+- **GitHub Releases come from `rman github-release`**, and need no configuration or opt-in of any
+  kind - a release isn't somewhere a package ships to (that's `publish.target`: npm, Docker Hub,
+  GitHub Packages), it's the repository's record that a version shipped, and every repo wants that
+  record. One release per run, named after the repository's own release tag, with notes rman
+  generates itself - bounded by the previous release and headed with each package's own version,
+  which is what makes it correct for a monorepo whose packages sit on different version lines. A
+  generic release action can't do this: notes generated before the bump don't know the version
+  being released, and notes generated after it can't find the boundary any more.
 - **The tags have to reach CI.** Both the release tag and the boundary its notes are measured from
   are read from git. A version bumped locally and pushed with a plain `git push` leaves its tags
-  behind - use `rman version --push`, which sends them. `rman publish` refuses to cut a release
-  whose tag it can't find rather than producing one covering the whole history.
+  behind - use `rman version --push`, which sends them. `rman github-release` refuses to cut a
+  release whose tag it can't find rather than producing one covering the whole history.
 - **Deliberately *not* inputs here: `bump`, `preid`, `npm-publish`, `dockerize`, `rman-version`,
   `ignore-packages`.** Every one of these would be a static, workflow-level value applied
   identically to *every* future run - the wrong place for something that should vary per commit or
