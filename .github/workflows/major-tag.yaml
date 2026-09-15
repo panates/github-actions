@@ -1,0 +1,49 @@
+name: "Major tag"
+
+# Keeps the floating major tag (v1, v2, ...) pointing at the latest main, so a consumer pinned to
+# "panates/github-actions/...@v2" always runs what main holds - the convention every published
+# action repo uses, and the one "@v1" already follows here.
+on:
+  push:
+    branches: [main]
+
+# A second push while this is running would race to move the same tag.
+concurrency:
+  group: major-tag
+  cancel-in-progress: false
+
+permissions:
+  contents: write # moving a tag is a write to this repository
+
+jobs:
+  retag:
+    name: "Move the major tag to main"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # the guard below compares against every existing major tag
+
+      - name: "Move tag"
+        run: |
+          set -euo pipefail
+
+          # The major comes from this repo's own version rather than being hard-coded, so shipping
+          # a 3.x needs no edit here - bump package.json and the tag follows.
+          version=$(node -p "require('./package.json').version")
+          major="v${version%%.*}"
+
+          # Guard against the one mistake that would break consumers: merging a new major into main
+          # without bumping package.json first. That would move the *older* major tag onto the new
+          # code - every repo pinned to it would silently start running a different pipeline. A
+          # major line, once superseded, is maintained on its own branch, never from main.
+          highest=$(git tag -l 'v[0-9]*' | grep -E '^v[0-9]+$' | sort -V | tail -n1 || true)
+          if [ -n "$highest" ] && [ "$(printf '%s\n%s\n' "$major" "$highest" | sort -V | tail -n1)" != "$major" ]; then
+            echo "::error::package.json is $version, so this would move $major - but $highest already exists."
+            echo "::error::Bump package.json to the major main actually ships before merging."
+            exit 1
+          fi
+
+          echo "Moving $major to $GITHUB_SHA ($version)"
+          git tag -f -a "$major" -m "$major - tracks main ($version)" "$GITHUB_SHA"
+          git push -f origin "refs/tags/$major"
