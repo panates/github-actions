@@ -1,4 +1,23 @@
 name: "Release"
+
+# **v3 runs on rman 2.x.** Three things in the v2 pipeline do not survive that major:
+#
+#   - `rman changed` was removed. The step calling it fails outright ("Did you mean changelog?"),
+#     and it must not be ported to `version --json | select(.status=="bump")` either: that plan
+#     includes the monorepo **root**, whose entry is informational and must never be published.
+#     It is simply deleted - `rman version` is already a no-op when nothing warrants a bump, so the
+#     gate in front of it never had anything to add. The reasoning the old docs gave for it
+#     ("`changed` is not the release signal") was right and argued for removing it, not keeping it.
+#   - npm auth moved into `panates/gh-setup-node@v2`, which is the only place that knows which file
+#     npm reads. Configuring it here as well is how a token ends up in a file npm never opens.
+#   - `npm install -g npm@latest` is gone. It was insurance against a runner image moving and it
+#     moved the runner instead: Node 24 ships npm 11.19.0, past the 11.5.1 that Trusted Publishing
+#     needs, and the upgrade took the job to npm 12.1.0 - a major the documented recipe never
+#     contemplates, since that recipe has no upgrade step at all.
+#
+# Consumers must migrate their own `.rmanrc` for rman 2 before pointing at @v3 - see
+# docs/node-release.md.
+
 on:
   workflow_call:
     inputs:
@@ -15,7 +34,7 @@ on:
         type: string
         default: ""
       github-registries:
-        description: "Namespaces of github registries (comma separated)"
+        description: "Scopes to route to npm.pkg.github.com (comma separated), or \"auto\". Needed only to INSTALL a dependency hosted there - publishing is routed by each package's own publishConfig.registry and authenticated by PERSONAL_ACCESS_TOKEN"
         type: string
         required: false
       cache-key:
@@ -38,10 +57,10 @@ on:
         type: string
     secrets:
       PERSONAL_ACCESS_TOKEN:
-        description: "Github personal access token"
-        required: true
+        description: "Github personal access token. Needed for npm.pkg.github.com, and for 'stage-repository' (a different repository, which the job's own GITHUB_TOKEN cannot reach). Not needed for git here - the checkout and 'version --push' use the job's GITHUB_TOKEN"
+        required: false
       NPM_TOKEN:
-        description: "npmjs.org auth token - omit entirely once the package is registered as an npm Trusted Publisher (OIDC); npm.pkg.github.com auth always uses PERSONAL_ACCESS_TOKEN regardless"
+        description: "npmjs.org auth token - omit entirely once the package is registered as an npm Trusted Publisher (OIDC). npm.pkg.github.com auth always uses PERSONAL_ACCESS_TOKEN regardless, since Trusted Publishing is npmjs.org only"
         required: false
       DOCKERHUB_NAMESPACE:
         description: "Dockerhub namespace. Required if 'stage-repository' defined, or a bare (no \"/\") publish.docker.image is used"
@@ -62,24 +81,32 @@ jobs:
     name: "Release"
     runs-on: ubuntu-latest
     env:
-      # Floating major, not exposed as a workflow input - picks up every 1.x fix/feature
-      # automatically (trusting semver's own major-version breaking-change boundary), without
-      # needing a coordinated github-actions release for each one, while still never jumping to a
-      # 2.x that could change the CLI behavior these steps depend on. Bumping the major is a
-      # maintenance decision made here, not something a consumer repo should drift independently.
-      RMAN_VERSION: "1"
+      # Floating major - picks up every 2.x fix/feature automatically (trusting semver's own
+      # major-version breaking-change boundary), without needing a coordinated github-actions
+      # release for each one, while still never jumping to a 3.x that could change the CLI
+      # behavior these steps depend on. Bumping the major is a maintenance decision made here,
+      # not something a consumer repo should drift independently.
+      RMAN_VERSION: "2"
     outputs:
       packages: ${{ steps.list.outputs.packages }}
       released: ${{ steps.publish.outputs.count != '0' }}
 
     steps:
+      # Installs rman globally at RMAN_VERSION, so every step below - `build_script` included -
+      # runs the same pinned CLI. v2 left `build_script`'s `rman build` resolving whatever
+      # `npm i rman -g` had put on PATH (unpinned `latest`) while every other step pinned with
+      # `npx rman@<major>`. They agreed only by accident, and would part company the moment a new
+      # rman major reached `latest`: the build would jump while version and publish stayed behind.
       - name: "Setup Environment"
-        uses: panates/gh-setup-node@v1
+        uses: panates/gh-setup-node@v2
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          fetch-depth: 0 # rman's own tag/changelog detection needs full history, not just the last N commits
+          fetch-depth: 0 # rman resolves each package's release boundary from its own last tag
           node-version: ${{ inputs.node-version }}
           github-registries: ${{ inputs.github-registries }}
+          npm-token: ${{ secrets.NPM_TOKEN }}
+          rman-version: ${{ env.RMAN_VERSION }}
+          install: "ci"
 
       - name: "Configure git identity"
         working-directory: ${{ inputs.workspace }}
@@ -98,7 +125,7 @@ jobs:
         working-directory: ${{ inputs.workspace }}
         run: |
           echo "=== rman info ===" # Node + whichever package manager .rmanrc actually configures
-          npx --yes "rman@$RMAN_VERSION" info
+          rman info
 
           echo "=== WORKFLOW ==="
           echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
@@ -116,8 +143,8 @@ jobs:
           # Up here, ahead of "Version", so bad credentials surface before anything has been
           # written: "Version" is the first step that mutates the repository, and a failure after it
           # leaves a bump and a tag already pushed with nothing released.
-          # It's needed this early anyway - "What to publish" decides whether a Docker package is
-          # already released with "docker manifest inspect", which reads the local credentials.
+          # It's needed this early anyway - "Publish" decides whether a Docker package is already
+          # released with "docker manifest inspect", which reads the local credentials.
           # Unauthenticated, a *private* image reads as "no such manifest", so an already-published
           # version would look unpublished and the whole pipeline would run to push it again.
           # A no-op for a repo that ships no Docker images and passes no credentials.
@@ -127,33 +154,20 @@ jobs:
             echo "No DOCKERHUB_USERNAME - skipping."
           fi
 
-      - name: "What changed"
-        id: changed
-        working-directory: ${{ inputs.workspace }}
-        run: |
-          # Only decides whether a NEW version number is warranted, nothing else. It answers a
-          # commit-driven question ("what landed since each package's last release"), so it is
-          # correctly empty whenever the bump already happened - a version cut locally and merged
-          # in, or an earlier run of this workflow. Gating the release on it would skip exactly
-          # those cases; that gate is "What to publish" below.
-          json=$(npx --yes "rman@$RMAN_VERSION" changed --json)
-          echo "count=$(echo "$json" | jq 'length')" >> "$GITHUB_OUTPUT"
-          echo "$json"
-
+      # Unconditional, and that is the v3 change. Severity always comes from rman's own reading of
+      # the commits since each package's last tag (conventional-commit prefixes, with a
+      # "Release-As:" footer as the one-off override) - never a static input here, which would
+      # apply identically to every future run. It writes nothing when no package has commits
+      # warranting a bump, so it needs no gate: the `rman changed` step that used to stand in front
+      # of it was answering a different question, and answering it wrongly for the two cases that
+      # matter most - a version bumped locally and merged in, and an earlier run whose publish
+      # failed after the tag was pushed. Both read "nothing changed" and both are due to publish.
+      #
+      # Ahead of the build on purpose: the published artifact carries whatever version its
+      # package.json held when it was built.
       - name: "Version"
-        if: ${{ steps.changed.outputs.count != '0' }}
         working-directory: ${{ inputs.workspace }}
-        run: |
-          # Severity always comes from rman's own auto-detection (conventional-commit prefixes,
-          # a "Release-As: patch|minor|major" commit-body footer to force a one-off exception) -
-          # never a static override here, which would apply identically to every future run
-          # regardless of what actually changed. Excluding a package from publish/changelog
-          # entirely is .rmanrc "publish.skip" (version itself never consults it), not a workflow
-          # input either - see docs/node-release.md. No --changelog flag here either, on purpose -
-          # set .rmanrc "version.changelog": true if you want it folded into every bump commit, so
-          # a manual local "rman version" run (see docs/node-release.md) behaves identically to
-          # this one, rather than a flag someone can forget on either side.
-          npx --yes "rman@$RMAN_VERSION" version --yes --push --allow-branch main
+        run: rman version --yes --push --allow-branch main
 
       - name: "Build"
         working-directory: ${{ inputs.workspace }}
@@ -163,21 +177,6 @@ jobs:
           # ends up publishing nothing, and "Publish" below decides for itself what is actually due.
           ${{ inputs.build_script }}
 
-      - name: "Ensure npm supports Trusted Publishing (OIDC)"
-        run: npm install -g npm@latest
-
-      - name: "Configure npm auth"
-        working-directory: ${{ inputs.workspace }}
-        run: |
-          # Only written when actually given - a package with neither line present, and no
-          # NPM_TOKEN, falls through to npm's own OIDC Trusted Publishing (see docs/node-release.md).
-          if [ -n "${{ secrets.NPM_TOKEN }}" ]; then
-            echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
-          fi
-          if [ -n "${{ inputs.github-registries }}" ]; then
-            echo "//npm.pkg.github.com/:_authToken=${{ secrets.PERSONAL_ACCESS_TOKEN }}" >> ~/.npmrc
-          fi
-
       - name: "Publish"
         id: publish
         working-directory: ${{ inputs.workspace }}
@@ -185,27 +184,31 @@ jobs:
           DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_NAMESPACE }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS }}
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         run: |
           # No --target here - each package's own .rmanrc "publish.target" is the single source of
-          # truth for whether it goes to npm, docker, both, or neither (default ["npm"]). Disabling
-          # a target for one run would just be a second, workflow-level place that decision could
-          # live - forcing it into .rmanrc keeps it in one place.
+          # truth for whether it goes to npm, docker, both, or neither. Which registry each npm
+          # package goes to is likewise its own "publishConfig.registry"; rman 2 asks that same
+          # registry whether the version is already out there, where earlier versions asked
+          # npmjs.org about every package regardless.
           #
           # The plan is computed first only to record what this run releases: "publish" itself
           # already publishes nothing when nothing is due, so this is not a gate - it's the signal
           # "stage_deploy" needs to stay off the manifest repository on a run that released nothing,
           # and it puts the reason in the log when a release doesn't happen.
-          json=$(npx --yes "rman@$RMAN_VERSION" publish --dry-run --json)
+          json=$(rman publish --dry-run --json)
           echo "$json"
           echo "count=$(echo "$json" | jq '[.[] | select(.status == "publish")] | length')" >> "$GITHUB_OUTPUT"
 
-          npx --yes "rman@$RMAN_VERSION" publish --yes
+          rman publish --yes
 
       - name: "GitHub Release"
         working-directory: ${{ inputs.workspace }}
         env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          # GithubReleaseService reads GITHUB_TOKEN, falling back to GH_TOKEN. The job's own token
+          # is enough - the release is cut in this repository, and `contents: write` is declared
+          # above. PERSONAL_ACCESS_TOKEN is preferred when present only so a repo that already
+          # relies on its wider scopes keeps behaving as it did.
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           # Unconditional, and deliberately not an input: a GitHub Release isn't somewhere a package
           # ships to (that's .rmanrc "publish.target" - npm, Docker Hub, GitHub Packages), it's the
@@ -218,13 +221,13 @@ jobs:
           # release and headed with each package's own version - which is why this can't be a
           # generic release action: before the bump the version isn't known, after the tag exists
           # the boundary can't be found, and rman is the only thing here that knows both.
-          npx --yes "rman@$RMAN_VERSION" github-release --yes
+          rman github-release --yes
 
       - name: "List packages"
         id: list
         working-directory: ${{ inputs.workspace }}
         run: |
-          json=$(npx --yes "rman@$RMAN_VERSION" list --json)
+          json=$(rman list --json)
           echo "packages=$json" >> "$GITHUB_OUTPUT"
 
   stage_deploy:
@@ -234,14 +237,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout manifest repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ${{ inputs.stage-repository }}
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           ref: ${{ inputs.stage-repository-branch }}
 
       - name: Update image in deployment yaml
-        uses: panates/github-actions/.github/actions/stage-deploy@v2
+        uses: panates/github-actions/.github/actions/stage-deploy@v3
         with:
           packages: ${{ needs.release.outputs.packages }}
           dockerhub-namespace: ${{ secrets.DOCKERHUB_NAMESPACE }}

@@ -2,11 +2,14 @@
 
 This Repository contains reusable workflows for GitHub Actions.
 
-`node-release.yaml`/`node-qc.yaml` have a **v2**, powered by [`rman`](https://github.com/panates/rman)
-(version bump, changelog, npm + Docker publish are all driven by rman/`.rmanrc` now, and npm
+`node-release.yaml`/`node-qc.yaml` have a **v3**, powered by [`rman` 2.x](https://github.com/panates/rman)
+(version bump, changelog, npm + Docker publish are all driven by rman/`.rmanrc`, and npm
 [Trusted Publishing (OIDC)](./docs/node-release.md#-npm-trusted-publishing-oidc---no-more-npm_token)
-is supported) - `v1` keeps working unchanged for repos that haven't migrated; migrate at your own
-pace by pointing `uses:` at `@v2` and following [docs/node-release.md](./docs/node-release.md).
+actually works — before v3 it could not, because npm never attempted the OIDC exchange without a
+configured registry).
+
+`v1` and `v2` keep working unchanged. **`@v3` requires migrating your `.rmanrc` to rman 2** — see
+[Migrating to v3](./docs/node-release.md#-migrating-to-v3).
 
 ## Workflows
 

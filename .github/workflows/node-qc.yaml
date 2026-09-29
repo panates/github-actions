@@ -1,4 +1,16 @@
 name: Quality Check
+
+# v3 runs on rman 2.x and on panates/gh-setup-node@v2. Two changes a caller has to know about:
+#
+#   - `rman-ci` is gone, replaced by `install`. It existed to choose between
+#     `npm install --only=dev --no-save` and `npx rman ci`, and neither is what a QC run wants:
+#     `--only=dev` is npm's deprecated spelling of `--omit=prod` and leaves out the runtime
+#     dependencies a test actually imports, while `rman ci` wipes node_modules across every
+#     workspace to reinstall from scratch - a repair tool, not an install. `npm ci` is the one that
+#     installs exactly the lockfile, which is what CI is for.
+#   - the setup action no longer deletes `package-lock.json` before installing, so what QC checks
+#     is now the dependency set the lockfile pins rather than whatever resolved that morning.
+
 on:
   workflow_call:
     inputs:
@@ -10,14 +22,22 @@ on:
         description: "NodeJS version"
         type: string
         default: ""
-      rman-ci:
-        description: "Use \"npx rman ci\" (a clean install across every workspace) instead of \"npm install --only=dev\""
+      fetch-depth:
+        description: "Commits to fetch. A qc_script using \"--changed-since <ref>\" needs 0 - it compares against a ref that a shallow clone does not have. v2 could not do this at all: it checked out at depth 1 twice"
         type: string
-        default: "false"
+        default: "1"
+      install:
+        description: "How to install dependencies: \"ci\" (from the lockfile), \"install\" (resolve fresh), or \"false\" (skip)"
+        type: string
+        default: "ci"
+      github-registries:
+        description: "Scopes to route to npm.pkg.github.com (comma separated), or \"auto\" - needed only to install a dependency hosted there"
+        type: string
+        required: false
     secrets:
       PERSONAL_ACCESS_TOKEN:
-        description: "Github personal access token"
-        required: true
+        description: "Github personal access token - needed only for npm.pkg.github.com"
+        required: false
 
 jobs:
 
@@ -29,26 +49,19 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Floating major, not a workflow input - see node-release.yaml's own RMAN_VERSION.
-      RMAN_VERSION: "1"
+      RMAN_VERSION: "2"
     steps:
-      - uses: actions/checkout@v7
-
+      # Checks out as well, so there is no separate actions/checkout step - v2 had both, which
+      # meant the repository was checked out twice on every run.
       - name: Setup Environment
-        uses: panates/gh-setup-node@v1
+        uses: panates/gh-setup-node@v2
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          install-deps: "false"
-          cache: "true"
-          cache-key: "dev"
+          fetch-depth: ${{ inputs.fetch-depth }}
           node-version: ${{ inputs.node-version }}
-
-      - name: Install dev dependencies
-        run: |
-          if [ "${{ inputs.rman-ci }}" = "true" ]; then
-            npx --yes "rman@$RMAN_VERSION" ci
-          else
-            npm install --only=dev --no-save
-          fi
+          github-registries: ${{ inputs.github-registries }}
+          install: ${{ inputs.install }}
+          rman-version: ${{ env.RMAN_VERSION }}
 
       - name: Run QC Tests
         run: ${{ inputs.qc_script }}

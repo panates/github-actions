@@ -1,4 +1,4 @@
-# 📦 Node.js Release Workflow (v2)
+# 📦 Node.js Release Workflow (v3)
 
 This reusable GitHub Actions workflow automates the release process for Node.js/monorepo projects,
 powered by [`rman`](https://github.com/panates/rman):
@@ -11,7 +11,10 @@ powered by [`rman`](https://github.com/panates/rman):
 - Optionally updates a separate "stage" deployment repository
 
 `v1` (the previous, `gh-repository-info`-based pipeline) keeps working unchanged for repos that
-haven't migrated yet - this page documents `v2` only.
+haven't migrated yet - this page documents `v3` only.
+
+> **⚠️ `@v3` requires rman 2.x.** Migrate your `.rmanrc` before pointing at it - see
+> [Migrating to v3](#-migrating-to-v3) at the bottom. `@v2` keeps running rman 1.x.
 
 ---
 
@@ -33,11 +36,13 @@ permissions:
 
 jobs:
   release:
-    uses: panates/github-actions/.github/workflows/node-release.yaml@v2
+    uses: panates/github-actions/.github/workflows/node-release.yaml@v3
     permissions:
       id-token: write
       contents: write
     secrets:
+      # Optional since v3 - needed only for npm.pkg.github.com and for `stage-repository`.
+      # The checkout and `rman version --push` use the job's own GITHUB_TOKEN.
       PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       # Omit NPM_TOKEN once the package is registered as a Trusted Publisher - see below.
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -77,10 +82,25 @@ workflow or your entry file, just:
      (required reviewers, etc.) to gate publishing
 2. Remove the `NPM_TOKEN` secret from your repo (or just stop passing it to this workflow).
 
-`node-release.yaml` only ever writes an npmjs.org auth line into `.npmrc` when `NPM_TOKEN` is
-actually given - omit it and npm's own CLI (≥ 11.5.1, which this workflow ensures) falls through to
-OIDC automatically. This is **npmjs.org-only** - `npm.pkg.github.com` (via `github-registries`)
-keeps using `PERSONAL_ACCESS_TOKEN` regardless, Trusted Publishing doesn't apply there.
+`panates/gh-setup-node@v2` writes an npmjs.org auth line only when `NPM_TOKEN` is actually given;
+omit it and OIDC is the only credential left. Two details it handles that are easy to get wrong if
+you ever configure npm auth yourself:
+
+- **npm only attempts the OIDC exchange when a default registry is configured.** Without
+  `registry-url` on `setup-node`, publishing fails with `ENEEDAUTH` - which is why every release
+  before v3 could publish with a token and only with a token, whatever this page claimed.
+- **`registry-url` makes `setup-node` write a placeholder `_authToken` line, which has to be
+  removed.** With nothing behind it, npm reads *having* the entry as being authenticated, never
+  reaches for OIDC, and the registry answers `404`
+  ([actions/setup-node#1551](https://github.com/actions/setup-node/issues/1551)). It is also
+  written into the file `NPM_CONFIG_USERCONFIG` points at, **not** `~/.npmrc`.
+
+The npm CLI version needs no intervention: Node 24 ships npm 11.19.0, past the 11.5.1 OIDC needs.
+v2 ran `npm install -g npm@latest` as insurance and it took the job to npm 12.1.0 instead; that step
+is gone.
+
+This is **npmjs.org-only** - `npm.pkg.github.com` keeps using `PERSONAL_ACCESS_TOKEN` regardless,
+Trusted Publishing doesn't apply there.
 
 ---
 
@@ -91,7 +111,7 @@ keeps using `PERSONAL_ACCESS_TOKEN` regardless, Trusted Publishing doesn't apply
 | `build_script` | string | `"rman build"` | Build command, run after versioning. |
 | `workspace` | string | `${{ github.workspace }}` | Working directory for every step. |
 | `node-version` | string | `""` | Node.js version. |
-| `github-registries` | string | - | Comma-separated GitHub Packages namespaces (npm.pkg.github.com auth). |
+| `github-registries` | string | - | Scopes to **route** to npm.pkg.github.com, or `"auto"`. Needed only to *install* a dependency hosted there - publishing is routed by each package's own `publishConfig.registry` and authenticated by `PERSONAL_ACCESS_TOKEN`, neither of which needs a scope list. |
 | `cache-key` / `cache-path` | string | - | Restores a GitHub Actions cache before building (unrelated to rman - e.g. large downloaded binaries a Dockerfile's build context needs). |
 | `stage-repository` / `stage-repository-branch` | string | - / `"main"` | A separate manifest repo to update after a successful release. |
 | `stage-files` | string | - | `<cr>`-delimited `<package name>=<stage file path>` pairs. |
@@ -100,7 +120,7 @@ keeps using `PERSONAL_ACCESS_TOKEN` regardless, Trusted Publishing doesn't apply
 
 | Name | Required | Description |
 | --- | --- | --- |
-| `PERSONAL_ACCESS_TOKEN` | ✅ Yes | GitHub token - checkout, pushing the version-bump commit/tag, the GitHub Release, GitHub Packages auth. |
+| `PERSONAL_ACCESS_TOKEN` | Optional | GitHub Packages auth, and `stage-repository` (a different repo, which the job's GITHUB_TOKEN cannot reach). **Not** used for git: the checkout and `rman version --push` use the job's own GITHUB_TOKEN, which is also why a release does not trigger a second run of itself. |
 | `NPM_TOKEN` | Optional | npmjs.org auth token - omit once the package uses Trusted Publishing. |
 | `DOCKERHUB_NAMESPACE` / `DOCKERHUB_USERNAME` / `DOCKERHUB_PASS` | Optional | Required if any package targets `docker`, or `stage-repository` is set. |
 
@@ -108,30 +128,32 @@ keeps using `PERSONAL_ACCESS_TOKEN` regardless, Trusted Publishing doesn't apply
 
 ## 🧱 Workflow steps summary
 
-1. **Setup Environment** - checkout (full history **and tags**) + Node, via `panates/gh-setup-node@v1`.
+1. **Setup Environment** - checkout (full history **and tags**) + Node + npm auth + `npm ci`, via
+   `panates/gh-setup-node@v2`. It also installs the pinned `rman` globally, so `build_script`'s
+   default `rman build` runs the same version every other step does.
 2. **Docker login** - ahead of everything that writes, so bad credentials surface before a version
    has been bumped and pushed. A no-op without `DOCKERHUB_USERNAME`.
-3. **What changed** - `rman changed --json`. Only decides whether a *new version number* is
-   warranted; it is correctly empty when the bump already happened.
-4. **Version** - `rman version --yes --push`, severity auto-detected from commits. Runs only when
-   step 3 found something. Always ahead of the build: the published artifact carries whatever
-   version `package.json` held when it was built.
-5. **Build** - `build_script` (default `rman build`). Unconditional - a package may need its
+3. **Version** - `rman version --yes --push`, severity auto-detected from commits. Unconditional;
+   it writes nothing when no package has commits warranting a bump. Always ahead of the build: the
+   published artifact carries whatever version `package.json` held when it was built.
+4. **Build** - `build_script` (default `rman build`). Unconditional - a package may need its
    in-repo dependencies built even on a run that publishes nothing.
-6. **Publish** - `rman publish --yes`, no `--target` filter - each package's own `.rmanrc
+5. **Publish** - `rman publish --yes`, no `--target` filter - each package's own `.rmanrc
    "publish.target"` decides npm and/or docker. It publishes only what is actually due, so there is
    no separate gate in front of it; the plan is printed first purely to record what the run
-   released (and to keep step 8 off a no-op run).
-7. **GitHub Release** - `rman github-release --yes`. Unconditional, and after the publish so a
+   released (and to keep step 7 off a no-op run).
+6. **GitHub Release** - `rman github-release --yes`. Unconditional, and after the publish so a
    failed registry push doesn't leave a release announcing code that never arrived. A no-op when
    the tag already has one.
-8. **Stage Deploy** (separate job, only if `stage-repository` is set **and** something was actually
+7. **Stage Deploy** (separate job, only if `stage-repository` is set **and** something was actually
    published) - updates the manifest repo's deployment YAML with each Docker package's new image tag.
 
-### Why `changed` is not the release signal
+### Why there is no gate in front of `version`
 
-`changed` answers "does anything need a *new version number*", which is commit-driven - so it is
-empty in exactly the cases where the bump already happened:
+v2 ran `rman changed --json` first and skipped `version` when it came back empty. **rman 2 removed
+`changed`, and the gate deserved removing on its own merits** - it answers "does anything need a
+*new version number*", which is commit-driven, so it is empty in exactly the cases where the bump
+already happened:
 
 | | `changed` | actually due to publish |
 | --- | --- | --- |
@@ -140,9 +162,14 @@ empty in exactly the cases where the bump already happened:
 | Nothing new since the last release | empty | no |
 | An earlier run's publish failed after the tag was pushed | **empty** | yes |
 
-So `changed` only ever decides whether to *bump*. What is due to publish is `rman publish`'s own
-question, answered per target against its own registry - and answered *after* the bump, since
-before it a release this very run is about to create still reads as "up-to-date".
+`rman version` is already a no-op in the "nothing new" row, so the gate never decided anything the
+command would not have decided itself.
+
+**Do not reintroduce it as `rman version --json | jq 'select(.status == "bump")'`.** That plan
+includes the monorepo **root**, whose entry is informational (`"isRoot": true`, *"monorepo root is
+never published on its own"*) - so a script reading it can end up with exactly one name to release,
+and that name is the one thing that must never be published. What is due to publish is
+`rman publish`'s own question, answered per target against its own registry.
 
 ## 📄 Notes
 
@@ -188,10 +215,62 @@ before it a release this very run is about to create still reads as "up-to-date"
     releases) isn't something this workflow has a documented pattern for yet - add it deliberately,
     with its own entry-workflow template, if/when a real need for one comes up.
   - The `rman` version this workflow runs is a floating major (`RMAN_VERSION` in
-    `node-release.yaml`/`node-qc.yaml` themselves, currently `"1"`), not exposed as an input -
-    every `1.x` fix/feature is picked up automatically, trusting semver's own major-version
+    `node-release.yaml`/`node-qc.yaml` themselves, currently `"2"`), not exposed as an input -
+    every `2.x` fix/feature is picked up automatically, trusting semver's own major-version
     breaking-change boundary, without needing a coordinated `github-actions` release for each one.
     Bumping the major is a deliberate maintenance decision made here, not something a consumer
     repo should be able to drift independently.
 - See [rman's own `publish` docs](https://github.com/panates/rman/blob/main/docs/cli/publish.md#docker-publishing-publishdocker)
   for the full `.rmanrc "publish.docker"` schema (platforms, build contexts, build args, ...).
+
+---
+
+## 🚚 Migrating to v3
+
+`@v3` runs rman 2.x. Point `uses:` at `@v3` only after your `.rmanrc` is migrated — and note that
+**rman 2 removed the JSON Schema**, so an `.rmanrc`/`.rmanrc.yml` key that no longer exists is now
+dropped in silence rather than flagged by your editor.
+
+### The one that is not mechanical
+
+**An unmarked key now cascades to the repository root as well.** In 1.x the root was the one level
+whose unmarked config stayed put; in 2.x every directory cascades, and `"[/]"` is how you address
+the root.
+
+This bites `run.<script>` hooks. On the root they are a repo-wide bookend run once at the repository
+root; on a package they are that package's own hook run in its directory. Cascaded, one declaration
+is now both:
+
+```yaml
+# 1.x - a hook written for packages
+run:
+  build:
+    after: node ../../support/postbuild.cjs   # now ALSO runs at the root, where it cannot resolve
+
+# 2.x - say which audience it is for
+"[*]":
+  run: { build: { after: node ../../support/postbuild.cjs } }
+```
+
+### Mechanical
+
+| 1.x | 2.x |
+| --- | --- |
+| `"[ws:*]"` | `"[*]"` (still accepted, but retired from the docs) |
+| `"[*]"` meaning "everything including the root" | unmarked |
+| a root-only key (`allowBranch`, `version.*`, `githubRelease.*`) | `"[/]"` |
+| `publish.directory` | `publish.npm.directory` — **refused with an error**, not ignored |
+| `plugins: ['node']` | nothing; the `node` preset is laid under every root by default |
+| `platform: 'node'` as a way to *load* the built-in | nothing, for the same reason — it only *names* a technology now |
+| `+key: [...]` (append) | `key: "${{ [...value, 'x'] }}"` — **refused with an error** |
+| `repository.git.*` in an expression | `git.*` (top level, beside `env`) |
+
+### Commands
+
+- **`rman changed` is gone.** Nothing in this workflow calls it any more; if your own scripts do,
+  see [Why there is no gate in front of `version`](#why-there-is-no-gate-in-front-of-version).
+- **`rman lint` is gone** — the built-in alias was removed so that a repository can contribute a
+  `lint` command of its own (a built-in name cannot be shadowed). `rman run lint` and every
+  `run.lint` key are unchanged. If you extend `@panates/rman-preset`, this is the change that lets
+  its own `lint` command load at all.
+- `--root` is now `--from-root`; `--from npm` is now `--from auto`.
