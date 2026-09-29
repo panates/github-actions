@@ -223,6 +223,19 @@ jobs:
           DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_NAMESPACE }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS }}
+          # **For a Dockerfile that installs from npm.pkg.github.com while the image builds**, which
+          # needs a token with `read:packages` - the job's own GITHUB_TOKEN cannot read another
+          # repository's packages. A package reaches it through `.rmanrc "publish.docker.buildArgs"`,
+          # where a value of exactly `"$GITHUB_TOKEN"` expands from here; rman passes nothing to
+          # `docker buildx` that a package did not ask for.
+          #
+          # `@v1` did this too, and hardcoded it: its release-docker action always appended
+          # `--build-arg GITHUB_TOKEN=<token>` whether the Dockerfile declared the ARG or not. This
+          # is the same secret, reaching the same place, now only where it is named.
+          #
+          # Empty when the repository passes no PERSONAL_ACCESS_TOKEN, which is the common case and
+          # costs nothing: a Dockerfile that never names the build-arg never sees it.
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         run: |
           # No --target here - each package's own .rmanrc "publish.target" is the single source of
           # truth for whether it goes to npm, docker, both, or neither. Which registry each npm
