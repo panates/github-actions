@@ -262,8 +262,16 @@ jobs:
         id: list
         working-directory: ${{ inputs.workspace }}
         run: |
-          json=$(rman list --json)
-          echo "packages=$json" >> "$GITHUB_OUTPUT"
+          # **`jq -c`, because `rman list --json` pretty-prints.** `echo "key=$value" >> $GITHUB_OUTPUT`
+          # only accepts a single line - a multi-line value fails the step with
+          # `Unable to process file command 'output' successfully. Invalid format '  {'`, which
+          # names neither the step's purpose nor the newline. Measured on a real release, where
+          # everything before it had already succeeded.
+          #
+          # Compacting rather than using the `key<<EOF` heredoc form: the value is JSON, so one line
+          # is its natural shape here, and a heredoc would additionally break on any line in the
+          # payload that happened to equal the delimiter.
+          echo "packages=$(rman list --json | jq -c .)" >> "$GITHUB_OUTPUT"
 
   stage_deploy:
     if: ${{ inputs.stage-repository != '' && needs.release.outputs.released == 'true' }}
