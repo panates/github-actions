@@ -34,11 +34,11 @@ on:
         type: string
         default: "24"
       github-registries:
-        description: "Scopes to route to npm.pkg.github.com (comma separated), or \"auto\". Needed only to INSTALL a dependency hosted there - publishing is routed by each package's own publishConfig.registry and authenticated by PERSONAL_ACCESS_TOKEN"
+        description: 'Scopes to route to npm.pkg.github.com (comma separated), or "auto". Needed only to INSTALL a dependency hosted there - publishing is routed by each package''s own publishConfig.registry and authenticated by PERSONAL_ACCESS_TOKEN'
         type: string
         required: false
       sync-branch:
-        description: "Long-lived working branch to merge the release commits back into, or \"\" to skip. The release writes the bump, the stamps and the changelog onto the default branch only, so a branch that never receives them drifts a release further behind every time - measured on one repository at 66 commits, where the root's version had changed in kind (0.13.5 -> a calendar identity) without its dev ever hearing about it. A branch that does not exist is skipped in silence"
+        description: 'Long-lived working branch to merge the release commits back into, or "" to skip. The release writes the bump, the stamps and the changelog onto the default branch only, so a branch that never receives them drifts a release further behind every time - measured on one repository at 66 commits, where the root''s version had changed in kind (0.13.5 -> a calendar identity) without its dev ever hearing about it. A branch that does not exist is skipped in silence'
         type: string
         default: "dev"
       cache-key:
@@ -67,13 +67,13 @@ on:
         description: "npmjs.org auth token - omit entirely once the package is registered as an npm Trusted Publisher (OIDC). npm.pkg.github.com auth always uses PERSONAL_ACCESS_TOKEN regardless, since Trusted Publishing is npmjs.org only"
         required: false
       DOCKERHUB_NAMESPACE:
-        description: "Dockerhub namespace. Required if 'stage-repository' defined, or a bare (no \"/\") publish.docker.image is used"
+        description: 'Dockerhub namespace. Required if ''stage-repository'' defined, or a bare (no "/") publish.docker.image is used'
         required: false
       DOCKERHUB_USERNAME:
-        description: "Dockerhub username. Required if any package's .rmanrc \"publish.target\" includes \"docker\""
+        description: 'Dockerhub username. Required if any package''s .rmanrc "publish.target" includes "docker"'
         required: false
       DOCKERHUB_PASS:
-        description: "Dockerhub password. Required if any package's .rmanrc \"publish.target\" includes \"docker\""
+        description: 'Dockerhub password. Required if any package''s .rmanrc "publish.target" includes "docker"'
         required: false
 
 permissions:

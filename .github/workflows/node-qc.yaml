@@ -16,22 +16,22 @@ on:
     inputs:
       qc_script:
         type: string
-        description: "QC script to be executed - e.g. \"rman run qc --changed-since origin/main\" to only lint/test packages that actually changed"
-        default: 'npm run qc'
+        description: 'QC script to be executed - e.g. "rman run qc --changed-since origin/main" to only lint/test packages that actually changed'
+        default: "npm run qc"
       node-version:
         description: "NodeJS version"
         type: string
         default: ""
       fetch-depth:
-        description: "Commits to fetch. A qc_script using \"--changed-since <ref>\" needs 0 - it compares against a ref that a shallow clone does not have. v2 could not do this at all: it checked out at depth 1 twice"
+        description: 'Commits to fetch. A qc_script using "--changed-since <ref>" needs 0 - it compares against a ref that a shallow clone does not have. v2 could not do this at all: it checked out at depth 1 twice'
         type: string
         default: "1"
       install:
-        description: "How to install dependencies: \"ci\" (from the lockfile), \"install\" (resolve fresh), or \"false\" (skip)"
+        description: 'How to install dependencies: "ci" (from the lockfile), "install" (resolve fresh), or "false" (skip)'
         type: string
         default: "ci"
       github-registries:
-        description: "Scopes to route to npm.pkg.github.com (comma separated), or \"auto\" - needed only to install a dependency hosted there"
+        description: 'Scopes to route to npm.pkg.github.com (comma separated), or "auto" - needed only to install a dependency hosted there'
         type: string
         required: false
     secrets:
@@ -40,7 +40,6 @@ on:
         required: false
 
 jobs:
-
   # ***********************************
   # Job: Quality Check
   # ***********************************

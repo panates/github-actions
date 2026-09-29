@@ -63,7 +63,7 @@ on:
         default: ""
     outputs:
       head-ref:
-        description: "The head branch of the pull request this commit came from - e.g. \"dev\". EMPTY when the commit came from no pull request, and empty when the lookup could not be made, so a caller comparing against it falls back to running its tests"
+        description: 'The head branch of the pull request this commit came from - e.g. "dev". EMPTY when the commit came from no pull request, and empty when the lookup could not be made, so a caller comparing against it falls back to running its tests'
         value: ${{ jobs.lookup.outputs.head-ref }}
       pr-number:
         description: "That pull request's number, or empty"

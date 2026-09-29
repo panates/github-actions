@@ -1,7 +1,7 @@
 name: "Stage Deploy"
 inputs:
   packages:
-    description: "\"rman list --json\" output - each docker-targeted package's own \"docker.image\" supplies the image name, no separate image-files mapping needed"
+    description: '"rman list --json" output - each docker-targeted package''s own "docker.image" supplies the image name, no separate image-files mapping needed'
     required: true
   docherhub-username:
     description: "DockerHub username"
@@ -10,7 +10,7 @@ inputs:
     description: "DockerHub password"
     required: true
   dockerhub-namespace:
-    description: "Dockerhub namespace - prefixed onto a bare (no \"/\") package.docker.image, same rule rman itself uses"
+    description: 'Dockerhub namespace - prefixed onto a bare (no "/") package.docker.image, same rule rman itself uses'
     required: true
   stage-files:
     description: "<cr> delimited pairing of <Package name=Stage file name>"

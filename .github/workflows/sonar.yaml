@@ -14,7 +14,7 @@ on:
 
 jobs:
   sonar-analysis:
-    name: 'Sonar Analysis'
+    name: "Sonar Analysis"
     runs-on: self-hosted
     timeout-minutes: 10
     steps:
@@ -25,10 +25,10 @@ jobs:
             exit 1
           fi
 
-      - name: 'Check out the repository'
+      - name: "Check out the repository"
         uses: actions/checkout@v7
 
-      - name: 'Sonar Processing'
+      - name: "Sonar Processing"
         run: |
           docker run --rm -v "${{ github.workspace }}:/usr/src" \
           -e SONAR_HOST_URL=${{ secrets.SONAR_HOST_URL }} \
