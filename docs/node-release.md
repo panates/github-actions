@@ -136,17 +136,49 @@ Trusted Publishing doesn't apply there.
 3. **Version** - `rman version --yes --push`, severity auto-detected from commits. Unconditional;
    it writes nothing when no package has commits warranting a bump. Always ahead of the build: the
    published artifact carries whatever version `package.json` held when it was built.
-4. **Build** - `build_script` (default `rman build`). Unconditional - a package may need its
+4. **Sync the lockfile** - `rman` writes `package.json` and does not manage lockfiles, so the
+   release commit leaves `package-lock.json` on the previous version. Committed separately, never
+   amended into the release commit whose tag is already pushed. See
+   [Why the lockfile needs a step of its own](#why-the-lockfile-needs-a-step-of-its-own).
+5. **Build** - `build_script` (default `rman build`). Unconditional - a package may need its
    in-repo dependencies built even on a run that publishes nothing.
-5. **Publish** - `rman publish --yes`, no `--target` filter - each package's own `.rmanrc
+6. **Publish** - `rman publish --yes`, no `--target` filter - each package's own `.rmanrc
    "publish.target"` decides npm and/or docker. It publishes only what is actually due, so there is
    no separate gate in front of it; the plan is printed first purely to record what the run
-   released (and to keep step 7 off a no-op run).
-6. **GitHub Release** - `rman github-release --yes`. Unconditional, and after the publish so a
+   released (and to keep step 8 off a no-op run).
+7. **GitHub Release** - `rman github-release --yes`. Unconditional, and after the publish so a
    failed registry push doesn't leave a release announcing code that never arrived. A no-op when
    the tag already has one.
-7. **Stage Deploy** (separate job, only if `stage-repository` is set **and** something was actually
+8. **Stage Deploy** (separate job, only if `stage-repository` is set **and** something was actually
    published) - updates the manifest repo's deployment YAML with each Docker package's new image tag.
+
+### Why the lockfile needs a step of its own
+
+**npm does not report this drift - it is the one mismatch it stays quiet about.** Measured on a real
+release, with `package.json` at `2.0.0` and the lockfile still at `2.0.0-beta.5`:
+
+| package.json changed | `npm ci` |
+| --- | --- |
+| a **dependency** the lockfile does not have | `EUSAGE`, refuses: *"Missing: ansi-colors@4.1.3 from lock file"* |
+| only the **`version`** field | silent, exit 0, `change rman 2.0.0 => 2.0.0-beta.5` |
+
+The second row is exactly what `rman version` produces. So without this step the lockfile rots from
+one release to the next and nothing ever turns red - Dependabot and any SBOM or audit tooling keep
+reading a stale record, and the next plain `npm install` rewrites it into an unrelated pull
+request's diff.
+
+**The install itself is fine either way**, which is why this went unnoticed: a workspace package is
+a symlink, so the real version is served regardless of what the lockfile says. This is a record
+being wrong, not a broken tree - worth fixing, not worth panicking about.
+
+**This is not a reason to delete the lockfile in CI.** That trade was tried and it costs more than
+it buys: CI then resolves fresh on every run while the committed lockfile freezes forever, so CI,
+every developer, and the repository's own record all test different trees - and the vulnerability
+count GitHub reports is measured against that frozen file, which the deletion never touches.
+Reproducibility goes with it: two runs of the same commit can produce different artifacts, and a bad
+or compromised patch release of any transitive dependency reaches the published package with no diff
+to review. Keep `npm ci`, and keep dependencies fresh deliberately - Renovate or Dependabot, where
+each update arrives as a reviewable pull request that CI proves before it merges.
 
 ### Why there is no gate in front of `version`
 

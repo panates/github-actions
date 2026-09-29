@@ -169,6 +169,41 @@ jobs:
         working-directory: ${{ inputs.workspace }}
         run: rman version --yes --push --allow-branch main
 
+      # **rman writes package.json and does not manage lockfiles, so the release commit leaves
+      # package-lock.json holding the previous version.** rman is ecosystem-agnostic and a lockfile
+      # is npm's concept, so this is the caller's job rather than a gap in rman.
+      #
+      # **npm will not tell you.** Measured on a real release: with package.json at 2.0.0 and the
+      # lock still at 2.0.0-beta.5, `npm ci` answered `change rman 2.0.0 => 2.0.0-beta.5` and exit
+      # 0. That is the one drift npm stays quiet about - a *dependency* in package.json that the
+      # lock does not have fails loudly with EUSAGE (measured too), but a workspace's own `version`
+      # field does not. So without this step the lockfile rots from one release to the next and
+      # nothing ever goes red: Dependabot and any SBOM or audit tooling keep reading a stale record,
+      # and the next plain `npm install` rewrites it into an unrelated pull request's diff.
+      #
+      # The install itself is unaffected either way - a workspace package is a symlink, so the real
+      # version is served regardless. This is a record being wrong, not a broken tree.
+      #
+      # **Its own commit, never `--amend`.** `version --push` has already pushed the release commit
+      # and its tags; amending would mean force-pushing and moving a published tag.
+      #
+      # Runs whatever `version` did - it also repairs a lockfile that drifted in an earlier release,
+      # and is a no-op when there is nothing to sync. The push does not re-trigger this workflow,
+      # since GITHUB_TOKEN pushes deliberately do not start workflow runs.
+      - name: "Sync the lockfile to the versions Version wrote"
+        working-directory: ${{ inputs.workspace }}
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only
+          if git diff --quiet -- package-lock.json; then
+            echo "Lockfile already matches the manifests - nothing to sync."
+          else
+            git add package-lock.json
+            git commit -m "chore: sync lockfile"
+            git push
+            echo "Committed the regenerated lockfile."
+          fi
+
       - name: "Build"
         working-directory: ${{ inputs.workspace }}
         shell: bash
