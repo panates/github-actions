@@ -37,6 +37,10 @@ on:
         description: "Scopes to route to npm.pkg.github.com (comma separated), or \"auto\". Needed only to INSTALL a dependency hosted there - publishing is routed by each package's own publishConfig.registry and authenticated by PERSONAL_ACCESS_TOKEN"
         type: string
         required: false
+      sync-branch:
+        description: "Long-lived working branch to merge the release commits back into, or \"\" to skip. The release writes the bump, the stamps and the changelog onto the default branch only, so a branch that never receives them drifts a release further behind every time - measured on one repository at 66 commits, where the root's version had changed in kind (0.13.5 -> a calendar identity) without its dev ever hearing about it. A branch that does not exist is skipped in silence"
+        type: string
+        default: "dev"
       cache-key:
         description: "Cache key to be restored"
         type: string
@@ -272,6 +276,71 @@ jobs:
           # is its natural shape here, and a heredoc would additionally break on any line in the
           # payload that happened to equal the delimiter.
           echo "packages=$(rman list --json | jq -c .)" >> "$GITHUB_OUTPUT"
+
+      # **Last, and unable to fail.** Everything that matters has already happened: the packages are
+      # on their registries and the GitHub Release is cut. A red run *after* that sends whoever
+      # opens it looking for a failed publish, so every problem here - no such branch, a conflict, a
+      # branch that refuses the push - is a `::warning::` and a zero exit. The release is not less
+      # released because a working branch could not be fast-forwarded.
+      #
+      # **Why it exists:** `rman version` writes the bump, the source stamps and the changelog onto
+      # the branch it ran on, which is the default one. A long-lived `dev` only ever flows *towards*
+      # main, so it never receives them and falls a release further behind each time. Measured on
+      # panates/syncbridge-public before this step existed: dev was 66 commits behind, far enough
+      # that the root's version had changed in kind - 0.13.5 against main's calendar identity - and
+      # nothing had reported it. The drift is created here, so it is closed here.
+      #
+      # **A merge, never a rebase or a force-push**: `dev` is shared, and rewriting it would move
+      # the ground under everyone working on it.
+      - name: "Merge the release commits back into the working branch"
+        if: ${{ inputs.sync-branch != '' }}
+        working-directory: ${{ inputs.workspace }}
+        env:
+          SYNC_BRANCH: ${{ inputs.sync-branch }}
+          RELEASED_FROM: ${{ github.ref_name }}
+        run: |
+          # No `set -e`: see the step's own note. Each failure path reports and returns 0.
+          set -uo pipefail
+
+          if [ "$SYNC_BRANCH" = "$RELEASED_FROM" ]; then
+            echo "Released from \"$RELEASED_FROM\", which is the branch to sync - nothing to do."
+            exit 0
+          fi
+
+          if ! git fetch --quiet origin "$SYNC_BRANCH" 2>/dev/null; then
+            echo "No \"$SYNC_BRANCH\" branch in this repository - nothing to merge the release into."
+            exit 0
+          fi
+
+          released=$(git rev-parse HEAD)
+          git checkout -q -B "$SYNC_BRANCH" "origin/$SYNC_BRANCH" || {
+            echo "::warning::Could not check out \"$SYNC_BRANCH\"; the release stands, sync it by hand."
+            exit 0
+          }
+
+          # `no-test` in the message, and it is not superstition: a push made with the job's own
+          # GITHUB_TOKEN starts no workflow at all, but a repository passing PERSONAL_ACCESS_TOKEN
+          # gets a real push event - and re-running a whole test matrix over commits that just
+          # passed it is the one cost this step could otherwise add. Every test.yml here honours the
+          # keyword.
+          if ! git merge --no-ff "$released" -m "Merge branch '$RELEASED_FROM' into $SYNC_BRANCH: the release commits
+
+          The version bump, the source stamps and the changelog entry are written on
+          '$RELEASED_FROM' by \`rman version\`. Merging them back keeps this branch reporting the
+          version that actually shipped, and keeps the next pull request carrying only its own work.
+
+          no-test"; then
+            git merge --abort 2>/dev/null
+            echo "::warning::\"$SYNC_BRANCH\" conflicts with the release commits, so it was left alone. Merge \"$RELEASED_FROM\" into it by hand."
+            exit 0
+          fi
+
+          if ! git push origin "$SYNC_BRANCH"; then
+            echo "::warning::Could not push \"$SYNC_BRANCH\" - protected, or something landed on it meanwhile. The release stands; merge it by hand."
+            exit 0
+          fi
+
+          echo "Merged the release commits into \"$SYNC_BRANCH\"."
 
   stage_deploy:
     if: ${{ inputs.stage-repository != '' && needs.release.outputs.released == 'true' }}
