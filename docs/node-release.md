@@ -297,6 +297,28 @@ run:
 | `+key: [...]` (append) | `key: "${{ [...value, 'x'] }}"` — **refused with an error** |
 | `repository.git.*` in an expression | `git.*` (top level, beside `env`) |
 
+### The one that bites at the Build step
+
+**A script the monorepo root declares no longer counts as the script being defined.** The root
+contributes only `pre`/`post` bookends, so under rman 2 a `run` whose script exists only there fails
+with
+
+```
+No package defines a "build" script.
+```
+
+and exits 1 - where rman 1 ran nothing and reported success. It lands on the `Build` step, **after
+`Version` has already bumped and pushed**, which is the worst place to find out. Two things to check
+before pointing a repository at `@v3`:
+
+| | |
+| --- | --- |
+| no package declares `build` | set `build_script: 'npm run build'` so npm runs the root script |
+| a `qc_script` of `rman run qc`, with `qc` only at the root | make it `npm run qc` |
+
+The recovery if it does happen is undramatic: `publish` never looks at whether `version` ran, so
+fixing the input and re-running releases exactly what the bump produced.
+
 ### Commands
 
 - **`rman changed` is gone.** Nothing in this workflow calls it any more; if your own scripts do,
