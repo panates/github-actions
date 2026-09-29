@@ -1,0 +1,133 @@
+name: PR Source
+
+# Answers the one question a `test` job's `if:` cannot ask for itself: **did this commit arrive
+# through a pull request, and from which branch?**
+#
+# A job's `if:` is evaluated before any job runs, so it can only read the event context - and a push
+# payload says nothing about a pull request. The only clue there is the commit *message*, which is
+# what every repository here was parsing:
+#
+#     startsWith(msg, 'Merge pull request') && contains(msg, '/dev')
+#
+# That reads the message GitHub writes for exactly **one** of the three merge buttons. Measured on
+# panates/syncbridge-public, where all three are enabled:
+#
+#   - "Create a merge commit" writes `Merge pull request #54 from panates/dev` - matches.
+#   - "Squash and merge" writes the PR title (`<title> (#54)`) - no match, so the long tests run
+#     although dev already ran them.
+#   - "Rebase and merge" replays dev's own commit messages - no match.
+#   - A local `git merge dev && git push` writes `Merge branch 'dev'` - no match. Measured: run
+#     36566297284 on syncbridge-public ran the full suite for exactly this reason.
+#
+# And it over-matches in the other direction, which is the worse half: `contains('/dev')` is a
+# substring test, so a pull request from `develop` or `dev-hotfix` **skips** tests that should have
+# run. Neither blind spot is fixable in the expression language - it has no regex and no
+# end-of-line anchor, so `/dev` cannot be pinned to the end of the branch name.
+#
+# So the question goes to the API, and an API call needs a job. This is that job. It costs one
+# short runner (no checkout, no node) per release, against a suite that takes minutes.
+#
+# Usage:
+#
+#   jobs:
+#     source:
+#       uses: panates/github-actions/.github/workflows/pr-source.yaml@v3
+#       permissions:
+#         contents: read
+#         pull-requests: read
+#
+#     test:
+#       needs: source
+#       if: needs.source.outputs.head-ref != 'dev'
+#       uses: ./.github/workflows/test.yml
+#
+#     release:
+#       needs: [source, test]
+#       if: >
+#         always() && !cancelled() &&
+#         needs.source.result == 'success' &&
+#         (needs.test.result == 'success' || needs.test.result == 'skipped')
+#       uses: panates/github-actions/.github/workflows/node-release.yaml@v3
+#
+# **`needs.source.result == 'success'` on the release job is not decoration.** A release job that
+# accepts `test` being *skipped* also accepts it being skipped **because this job failed** - which
+# would release untested code, the one outcome the whole arrangement exists to prevent. The lookup
+# step below is written never to fail, and that clause is the second lock on the same door.
+
+on:
+  workflow_call:
+    inputs:
+      base:
+        description: "Only consider pull requests merged INTO this branch. Defaults to the branch being built, which is what a release workflow wants"
+        type: string
+        default: ""
+    outputs:
+      head-ref:
+        description: "The head branch of the pull request this commit came from - e.g. \"dev\". EMPTY when the commit came from no pull request, and empty when the lookup could not be made, so a caller comparing against it falls back to running its tests"
+        value: ${{ jobs.lookup.outputs.head-ref }}
+      pr-number:
+        description: "That pull request's number, or empty"
+        value: ${{ jobs.lookup.outputs.pr-number }}
+
+# What the lookup needs. A caller granting less does not break the run - the API call fails, the
+# step warns, and the answer is empty, which runs the tests.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # ***********************************
+  # Job: PR Source
+  # ***********************************
+  lookup:
+    name: "PR Source"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      head-ref: ${{ steps.q.outputs.head-ref }}
+      pr-number: ${{ steps.q.outputs.pr-number }}
+    steps:
+      # "List pull requests associated with a commit" answers for all three merge modes: GitHub
+      # associates the merge commit, the squash commit and each rebased commit with the pull
+      # request that produced them. That is the whole reason this is an API call rather than a
+      # cleverer regex.
+      - name: "Ask which pull request this commit came from"
+        id: q
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          BASE: ${{ inputs.base || github.ref_name }}
+        run: |
+          # **No `set -e`, and every failure path falls through to an empty answer.** See the
+          # header: a caller gates `test` on this job and lets `release` proceed when `test` is
+          # skipped, so a hard failure here reads as "no tests needed". Empty reads as "not from a
+          # pull request", which runs them.
+          set -uo pipefail
+
+          json=$(gh api "repos/$REPO/commits/$SHA/pulls" 2>&1) || {
+            echo "::warning::Could not list the pull requests for $SHA, so the tests will run. $json"
+            json='[]'
+          }
+
+          # `--arg`, never string interpolation into the filter: a branch name comes from whoever
+          # opened the pull request. (Git itself forbids spaces and control characters in a ref
+          # name, which is also why the value below is safe to write as a bare `key=value`.)
+          #
+          # Filtered by `base.ref` rather than taking `.[0]`: a commit can be associated with more
+          # than one pull request, and the only one this question is about is the one merged into
+          # the branch being built.
+          pr=$(printf '%s' "$json" |
+                 jq -c --arg base "$BASE" '[.[] | select(.base.ref == $base)][0] // {}' 2>/dev/null) || pr='{}'
+
+          ref=$(printf '%s' "$pr" | jq -r '.head.ref // ""' 2>/dev/null) || ref=''
+          num=$(printf '%s' "$pr" | jq -r '.number // ""' 2>/dev/null) || num=''
+
+          if [ -n "$ref" ]; then
+            echo "$SHA came from #$num, whose head branch is \"$ref\" (merged into \"$BASE\")."
+          else
+            echo "$SHA is associated with no pull request merged into \"$BASE\"."
+          fi
+
+          echo "head-ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "pr-number=$num" >> "$GITHUB_OUTPUT"
