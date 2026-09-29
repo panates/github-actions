@@ -3,10 +3,6 @@
   "version": "3.0.0",
   "scripts": {
     "prepare": "husky",
-    "tag": "npm run tag:version && npm run tag:major && npm run tag:push",
-    "tag:version": "git tag v$npm_package_version -f",
-    "tag:major": "MAJOR=v${npm_package_version%%.*}; git tag -d $MAJOR 2>/dev/null; git push origin :refs/tags/$MAJOR 2>/dev/null; git tag $MAJOR v$npm_package_version -f",
-    "tag:push": "git push origin --tags",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --max-warnings=0 --fix",
     "prebuild": "npm run lint",
