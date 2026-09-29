@@ -30,9 +30,9 @@ on:
         type: string
         default: ${{ github.workspace }}
       node-version:
-        description: "NodeJS version"
+        description: "NodeJS version. The default is 24 rather than the setup action's lts/*, because npm Trusted Publishing needs npm >= 11.5.1 and Node 22 LTS ships npm 10 - which has no OIDC support at all, so a publish with no NPM_TOKEN fails with ENEEDAUTH rather than reaching for a token it could have"
         type: string
-        default: ""
+        default: "24"
       github-registries:
         description: "Scopes to route to npm.pkg.github.com (comma separated), or \"auto\". Needed only to INSTALL a dependency hosted there - publishing is routed by each package's own publishConfig.registry and authenticated by PERSONAL_ACCESS_TOKEN"
         type: string

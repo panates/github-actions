@@ -110,7 +110,7 @@ Trusted Publishing doesn't apply there.
 | --- | --- | --- | --- |
 | `build_script` | string | `"rman build"` | Build command, run after versioning. |
 | `workspace` | string | `${{ github.workspace }}` | Working directory for every step. |
-| `node-version` | string | `""` | Node.js version. |
+| `node-version` | string | `"24"` | Node.js version. **Not the setup action's `lts/*`**: Node 22 LTS ships npm 10, which has no Trusted Publishing support at all, so a publish with no `NPM_TOKEN` fails with `ENEEDAUTH` instead of reaching for OIDC. Node 24 ships npm 11.19. |
 | `github-registries` | string | - | Scopes to **route** to npm.pkg.github.com, or `"auto"`. Needed only to *install* a dependency hosted there - publishing is routed by each package's own `publishConfig.registry` and authenticated by `PERSONAL_ACCESS_TOKEN`, neither of which needs a scope list. |
 | `cache-key` / `cache-path` | string | - | Restores a GitHub Actions cache before building (unrelated to rman - e.g. large downloaded binaries a Dockerfile's build context needs). |
 | `stage-repository` / `stage-repository-branch` | string | - / `"main"` | A separate manifest repo to update after a successful release. |
