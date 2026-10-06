@@ -139,9 +139,6 @@ jobs:
           echo "=== RESTORED CACHE ==="
           ls -R "${{ inputs.cache-path }}" 2>/dev/null || echo "Cache path not found"
 
-          echo "=== VERSION CHANGES ==="
-          rman version
-
       - name: "Docker login"
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -160,6 +157,9 @@ jobs:
           else
             echo "No DOCKERHUB_USERNAME - skipping."
           fi
+
+      - name: "Package List"
+        run: rman list
 
       # Unconditional, and that is the v3 change. Severity always comes from rman's own reading of
       # the commits since each package's last tag (conventional-commit prefixes, with a
