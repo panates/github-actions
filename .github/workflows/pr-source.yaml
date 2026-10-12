@@ -105,11 +105,8 @@ jobs:
           # pull request", which runs them.
           set -uo pipefail
 
-          json=$(gh api "repos/$REPO/commits/$SHA/pulls" 2>&1) || {
-            echo "::warning::Could not list the pull requests for $SHA, so the tests will run. $json"
-            json='[]'
-          }
-
+          # The pull request merged into $BASE that $SHA belongs to, as compact JSON, or `{}`.
+          #
           # `--arg`, never string interpolation into the filter: a branch name comes from whoever
           # opened the pull request. (Git itself forbids spaces and control characters in a ref
           # name, which is also why the value below is safe to write as a bare `key=value`.)
@@ -117,8 +114,46 @@ jobs:
           # Filtered by `base.ref` rather than taking `.[0]`: a commit can be associated with more
           # than one pull request, and the only one this question is about is the one merged into
           # the branch being built.
-          pr=$(printf '%s' "$json" |
-                 jq -c --arg base "$BASE" '[.[] | select(.base.ref == $base)][0] // {}' 2>/dev/null) || pr='{}'
+          associated() {
+            local json
+            json=$(gh api "repos/$REPO/commits/$SHA/pulls" 2>&1) || {
+              echo "::warning::Could not list the pull requests for $SHA. $json" >&2
+              echo '{}'
+              return
+            }
+            printf '%s' "$json" |
+              jq -c --arg base "$BASE" '[.[] | select(.base.ref == $base)][0] // {}' 2>/dev/null || echo '{}'
+          }
+
+          # **The same question from the other side**: the pull requests merged into $BASE most
+          # recently, and the one whose `merge_commit_sha` is $SHA. GitHub writes that field when
+          # the pull request merges, while the commit-to-pull-request association above is filled
+          # in a few seconds later - and this job runs within seconds of the merge. Measured on
+          # panates/syncbridge: #255 merged at 12:34:51, this job asked at 12:34:58 and got
+          # nothing back, so the suite ran for a commit `dev` had already tested; the same query
+          # asked again later answered #255. `merge_commit_sha` is the merge commit, the squash
+          # commit, or the last rebased commit - the three things a push to $BASE can be.
+          merged() {
+            local json
+            json=$(gh api "repos/$REPO/pulls?state=closed&base=$BASE&sort=updated&direction=desc&per_page=30" 2>&1) || {
+              echo "::warning::Could not list the pull requests merged into $BASE. $json" >&2
+              echo '{}'
+              return
+            }
+            printf '%s' "$json" |
+              jq -c --arg sha "$SHA" '[.[] | select(.merge_commit_sha == $sha)][0] // {}' 2>/dev/null || echo '{}'
+          }
+
+          # Both, a few times: an empty answer seconds after a merge is more likely "not yet" than
+          # "no pull request", and a direct push - which really has none - costs only the wait.
+          pr='{}'
+          for attempt in 1 2 3 4; do
+            pr=$(associated)
+            [ "$pr" != '{}' ] && break
+            pr=$(merged)
+            [ "$pr" != '{}' ] && break
+            [ "$attempt" -lt 4 ] && sleep 5
+          done
 
           ref=$(printf '%s' "$pr" | jq -r '.head.ref // ""' 2>/dev/null) || ref=''
           num=$(printf '%s' "$pr" | jq -r '.number // ""' 2>/dev/null) || num=''
