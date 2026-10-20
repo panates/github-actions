@@ -59,9 +59,13 @@ on:
       stage-files:
         description: "<cr> delimited pairing of <Package name=Stage files>"
         type: string
+      git-app-client-id:
+        description: "Client ID of a GitHub App whose installation token makes the release's git pushes - the checkout, 'version --push' and its tags, the lockfile sync and the merge back into 'sync-branch'. For a default branch whose ruleset requires pull requests and lets only that App bypass it. Needs GIT_APP_PRIVATE_KEY too; empty (the default) keeps the job's own GITHUB_TOKEN. Those pushes then start workflow runs, which GITHUB_TOKEN pushes do not - see docs/node-release.md"
+        type: string
+        default: ""
     secrets:
       PERSONAL_ACCESS_TOKEN:
-        description: "Github personal access token. Needed for npm.pkg.github.com, and for 'stage-repository' (a different repository, which the job's own GITHUB_TOKEN cannot reach). Not needed for git here - the checkout and 'version --push' use the job's GITHUB_TOKEN"
+        description: "Github personal access token. Needed for npm.pkg.github.com, and for 'stage-repository' (a different repository, which the job's own GITHUB_TOKEN cannot reach). Not used for git here - the checkout and 'version --push' use the job's GITHUB_TOKEN, or the App token of 'git-app-client-id'"
         required: false
       NPM_TOKEN:
         description: "npmjs.org auth token - omit entirely once the package is registered as an npm Trusted Publisher (OIDC). npm.pkg.github.com auth always uses PERSONAL_ACCESS_TOKEN regardless, since Trusted Publishing is npmjs.org only"
@@ -74,6 +78,9 @@ on:
         required: false
       DOCKERHUB_PASS:
         description: 'Dockerhub password. Required if any package''s .rmanrc "publish.target" includes "docker"'
+        required: false
+      GIT_APP_PRIVATE_KEY:
+        description: "Private key of the GitHub App named by 'git-app-client-id'"
         required: false
 
 permissions:
@@ -96,6 +103,20 @@ jobs:
       released: ${{ steps.publish.outputs.count != '0' }}
 
     steps:
+      # **Inside this workflow, not the caller's**, because a token cannot cross from one job to
+      # another - the caller can only hand over the App's identity and key. A ruleset cannot name
+      # the GitHub Actions app as a bypass actor ("Actor GitHub Actions integration must be part of
+      # the ruleset source or owner organization", measured on syncbridge-io/syncbridge), so a
+      # default branch that requires pull requests needs an App of the repository's own to push the
+      # release. Scoped to this repository, which is the action's default with no `owner`.
+      - name: "Git token"
+        id: git-token
+        if: ${{ inputs.git-app-client-id != '' }}
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ inputs.git-app-client-id }}
+          private-key: ${{ secrets.GIT_APP_PRIVATE_KEY }}
+
       # Installs rman globally at RMAN_VERSION, so every step below - `build_script` included -
       # runs the same pinned CLI. v2 left `build_script`'s `rman build` resolving whatever
       # `npm i rman -g` had put on PATH (unpinned `latest`) while every other step pinned with
@@ -111,6 +132,8 @@ jobs:
           npm-token: ${{ secrets.NPM_TOKEN }}
           rman-version: ${{ env.RMAN_VERSION }}
           install: "ci"
+          # Empty without an App, which leaves the checkout on the job's own GITHUB_TOKEN.
+          git-token: ${{ steps.git-token.outputs.token }}
 
       - name: "Configure git identity"
         working-directory: ${{ inputs.workspace }}
@@ -196,7 +219,8 @@ jobs:
       #
       # Runs whatever `version` did - it also repairs a lockfile that drifted in an earlier release,
       # and is a no-op when there is nothing to sync. The push does not re-trigger this workflow,
-      # since GITHUB_TOKEN pushes deliberately do not start workflow runs.
+      # since GITHUB_TOKEN pushes deliberately do not start workflow runs - an App token's
+      # ('git-app-client-id') do, and the caller skips them by commit message.
       - name: "Sync the lockfile to the versions Version wrote"
         working-directory: ${{ inputs.workspace }}
         run: |
@@ -308,12 +332,26 @@ jobs:
       #
       # **A merge, never a rebase or a force-push**: `dev` is shared, and rewriting it would move
       # the ground under everyone working on it.
+      # **A second App token, minted just before it is needed.** An installation token lasts an hour,
+      # and the checkout's one was minted before the build and every publish - Docker images
+      # included - which can take longer than that. `continue-on-error` because the step below may
+      # not fail the release either.
+      - name: "Git token for the merge back"
+        id: sync-token
+        if: ${{ inputs.sync-branch != '' && inputs.git-app-client-id != '' }}
+        continue-on-error: true
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ inputs.git-app-client-id }}
+          private-key: ${{ secrets.GIT_APP_PRIVATE_KEY }}
+
       - name: "Merge the release commits back into the working branch"
         if: ${{ inputs.sync-branch != '' }}
         working-directory: ${{ inputs.workspace }}
         env:
           SYNC_BRANCH: ${{ inputs.sync-branch }}
           RELEASED_FROM: ${{ github.ref_name }}
+          FRESH_TOKEN: ${{ steps.sync-token.outputs.token }}
         run: |
           # No `set -e`: see the step's own note. Each failure path reports and returns 0.
           set -uo pipefail
@@ -335,8 +373,8 @@ jobs:
           }
 
           # `no-test` in the message, and it is not superstition: a push made with the job's own
-          # GITHUB_TOKEN starts no workflow at all, but a repository passing PERSONAL_ACCESS_TOKEN
-          # gets a real push event - and re-running a whole test matrix over commits that just
+          # GITHUB_TOKEN starts no workflow at all, but one made with a GitHub App token
+          # ('git-app-client-id') gets a real push event - and re-running a whole test matrix over commits that just
           # passed it is the one cost this step could otherwise add. Every test.yml here honours the
           # keyword.
           if ! git merge --no-ff "$released" -m "Merge branch '$RELEASED_FROM' into $SYNC_BRANCH: the release commits
@@ -351,7 +389,17 @@ jobs:
             exit 0
           fi
 
-          if ! git push origin "$SYNC_BRANCH"; then
+          # With a fresh App token, push with it instead of the one checkout persisted, which may
+          # have expired. `-c` outranks every config file, and an empty value first resets the
+          # header list checkout's credentials file contributed - two Authorization headers would
+          # otherwise both be sent.
+          auth=()
+          if [ -n "${FRESH_TOKEN:-}" ]; then
+            header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$FRESH_TOKEN" | base64 | tr -d '\n')"
+            auth=(-c "http.https://github.com/.extraheader=" -c "http.https://github.com/.extraheader=$header")
+          fi
+
+          if ! git "${auth[@]}" push origin "$SYNC_BRANCH"; then
             echo "::warning::Could not push \"$SYNC_BRANCH\" - protected, or something landed on it meanwhile. The release stands; merge it by hand."
             exit 0
           fi

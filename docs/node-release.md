@@ -115,14 +115,55 @@ Trusted Publishing doesn't apply there.
 | `cache-key` / `cache-path` | string | - | Restores a GitHub Actions cache before building (unrelated to rman - e.g. large downloaded binaries a Dockerfile's build context needs). |
 | `stage-repository` / `stage-repository-branch` | string | - / `"main"` | A separate manifest repo to update after a successful release. |
 | `stage-files` | string | - | `<cr>`-delimited `<package name>=<stage file path>` pairs. |
+| `git-app-client-id` | string | `""` | Client ID of a GitHub App whose token makes the release's git pushes - see [Pushing to a protected default branch](#-pushing-to-a-protected-default-branch). Needs `GIT_APP_PRIVATE_KEY`. |
 
 ## 🔐 Secrets
 
 | Name | Required | Description |
 | --- | --- | --- |
-| `PERSONAL_ACCESS_TOKEN` | Optional | GitHub Packages auth, and `stage-repository` (a different repo, which the job's GITHUB_TOKEN cannot reach). **Not** used for git: the checkout and `rman version --push` use the job's own GITHUB_TOKEN, which is also why a release does not trigger a second run of itself. |
+| `PERSONAL_ACCESS_TOKEN` | Optional | GitHub Packages auth, and `stage-repository` (a different repo, which the job's GITHUB_TOKEN cannot reach). **Not** used for git: the checkout and `rman version --push` use the job's own GITHUB_TOKEN - which is also why a release does not trigger a second run of itself - or the App token of `git-app-client-id`. |
 | `NPM_TOKEN` | Optional | npmjs.org auth token - omit once the package uses Trusted Publishing. |
 | `DOCKERHUB_NAMESPACE` / `DOCKERHUB_USERNAME` / `DOCKERHUB_PASS` | Optional | Required if any package targets `docker`, or `stage-repository` is set. |
+| `GIT_APP_PRIVATE_KEY` | Optional | Private key of the App named by `git-app-client-id`. |
+
+## 🛡️ Pushing to a protected default branch
+
+A release pushes to the default branch: the release commit and its tags (`rman version --push`),
+then the lockfile sync. A ruleset requiring pull requests stops that, and **it cannot exempt the
+job's own token** - naming the GitHub Actions app as a bypass actor is refused with *"Actor GitHub
+Actions integration must be part of the ruleset source or owner organization"*. The way through is
+a GitHub App of your own:
+
+1. Create an App with **Contents: read & write**, install it on the repository only, and add it to
+   the ruleset as an **always** bypass actor.
+2. Store its **Client ID** as a variable and its private key as a secret, and pass both:
+
+   ```yaml
+   jobs:
+     release:
+       uses: panates/github-actions/.github/workflows/node-release.yaml@v3
+       with:
+         git-app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+       secrets:
+         GIT_APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+   ```
+
+The token is minted inside this workflow (a token cannot cross jobs), scoped to the repository,
+and used for the checkout and every push after it. **A second one is minted just before the merge
+back into `sync-branch`**: an installation token lasts an hour, and the build and the publishes in
+between - Docker images included - can take longer.
+
+**Those pushes start workflow runs**, which a `GITHUB_TOKEN` push never does. The merge back carries
+`no-test`; the release and lockfile commits on the default branch reach your own `release.yml`, so
+skip them there by message:
+
+```yaml
+jobs:
+  release:
+    if: >-
+      !startsWith(github.event.head_commit.message, 'chore(release):') &&
+      !startsWith(github.event.head_commit.message, 'chore: sync lockfile')
+```
 
 ---
 
