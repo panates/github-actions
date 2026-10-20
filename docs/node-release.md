@@ -126,6 +126,32 @@ Trusted Publishing doesn't apply there.
 | `DOCKERHUB_NAMESPACE` / `DOCKERHUB_USERNAME` / `DOCKERHUB_PASS` | Optional | Required if any package targets `docker`, or `stage-repository` is set. |
 | `GIT_APP_PRIVATE_KEY` | Optional | Private key of the App named by `git-app-client-id`. |
 
+## 📤 Outputs
+
+| Name | Description |
+| --- | --- |
+| `released` | `"true"` when the run published at least one package. |
+| `packages` | `rman list --json`, compacted. |
+| `docker-images` | The Docker images this run pushed, as JSON: `[{"package","image","version","digest"}]`, `[]` when none. The digest is the pushed index's, taken from buildx in the same run. |
+
+**Deploy by `image@digest`, never by tag.** The digest comes from `rman publish --yes --json`
+(rman >= 2.31), which reports what buildx itself pushed - a tag read back from Docker Hub by a later
+job may already point at another build.
+
+```yaml
+jobs:
+  release:
+    uses: panates/github-actions/.github/workflows/node-release.yaml@v3
+  deploy:
+    needs: release
+    if: ${{ needs.release.outputs.docker-images != '[]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo '${{ needs.release.outputs.docker-images }}' |
+            jq -r '.[] | "\(.image)@\(.digest)"'
+```
+
 ## 🛡️ Pushing to a protected default branch
 
 A release pushes to the default branch: the release commit and its tags (`rman version --push`),

@@ -20,6 +20,18 @@ name: "Release"
 
 on:
   workflow_call:
+    # What a caller's later jobs can read as `needs.<job>.outputs.<name>` - a reusable workflow's
+    # job outputs reach no one until they are mapped here.
+    outputs:
+      released:
+        description: '"true" when this run published at least one package to a registry'
+        value: ${{ jobs.release.outputs.released }}
+      packages:
+        description: "rman list --json, compacted - every package with its version and targets"
+        value: ${{ jobs.release.outputs.packages }}
+      docker-images:
+        description: 'JSON array of the Docker images this run pushed - [{"package","image","version","digest"}], the digest being the pushed index''s, from buildx itself. [] when none were pushed. Deploy by image@digest, never by tag: a tag can move after the build'
+        value: ${{ jobs.release.outputs.docker-images }}
     inputs:
       build_script:
         description: "Build script to be executed"
@@ -101,6 +113,7 @@ jobs:
     outputs:
       packages: ${{ steps.list.outputs.packages }}
       released: ${{ steps.publish.outputs.count != '0' }}
+      docker-images: ${{ steps.publish.outputs.docker-images }}
 
     steps:
       # **Inside this workflow, not the caller's**, because a token cannot cross from one job to
@@ -270,15 +283,24 @@ jobs:
           # registry whether the version is already out there, where earlier versions asked
           # npmjs.org about every package regardless.
           #
-          # The plan is computed first only to record what this run releases: "publish" itself
-          # already publishes nothing when nothing is due, so this is not a gate - it's the signal
-          # "stage_deploy" needs to stay off the manifest repository on a run that released nothing,
-          # and it puts the reason in the log when a release doesn't happen.
-          json=$(rman publish --dry-run --json)
+          # **One run, and its own JSON says what happened.** Without --dry-run, rman (>= 2.31)
+          # prints that document once publishing is over - "published" rows, and for docker the
+          # digest buildx returned for the push, under "artifact" - with everything else on stderr.
+          # So the count is what was actually published, and a caller deploying by digest reads it
+          # from the push itself rather than from Docker Hub later, where a tag may have moved.
+          #
+          # The outputs are written before the step's own exit, so a partly failed publish still
+          # says what did go up. "publish" itself publishes nothing when nothing is due.
+          status=0
+          json=$(rman publish --yes --json) || status=$?
           echo "$json"
-          echo "count=$(echo "$json" | jq '[.[] | select(.status == "publish")] | length')" >> "$GITHUB_OUTPUT"
-
-          rman publish --yes
+          # A run that died before printing leaves nothing to parse, and an empty count would read as
+          # "released" (empty is not "0") - so no document means nothing published.
+          count=$(echo "${json:-[]}" | jq '[.[] | select(.status == "published")] | length' 2>/dev/null || echo 0)
+          images=$(echo "${json:-[]}" | jq -c '[.[] | select(.target == "docker" and .status == "published" and .artifact) | {package: .name, image: .artifact.ref, version, digest: .artifact.digest}]' 2>/dev/null || echo '[]')
+          echo "count=${count:-0}" >> "$GITHUB_OUTPUT"
+          echo "docker-images=${images:-[]}" >> "$GITHUB_OUTPUT"
+          exit "$status"
 
       - name: "GitHub Release"
         working-directory: ${{ inputs.workspace }}
