@@ -40,13 +40,15 @@ jobs:
     permissions:
       id-token: write
       contents: write
+    with:
+      # Not a secret - see "Outputs" for why passing it as one costs you docker-images.
+      dockerhub-namespace: ${{ vars.DOCKERHUB_NAMESPACE }}
     secrets:
       # Optional since v3 - needed only for npm.pkg.github.com and for `stage-repository`.
       # The checkout and `rman version --push` use the job's own GITHUB_TOKEN.
       PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       # Omit NPM_TOKEN once the package is registered as a Trusted Publisher - see below.
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_NAMESPACE }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_PASS: ${{ secrets.DOCKERHUB_PASS }}
 ```
@@ -115,6 +117,7 @@ Trusted Publishing doesn't apply there.
 | `cache-key` / `cache-path` | string | - | Restores a GitHub Actions cache before building (unrelated to rman - e.g. large downloaded binaries a Dockerfile's build context needs). |
 | `stage-repository` / `stage-repository-branch` | string | - / `"main"` | A separate manifest repo to update after a successful release. |
 | `stage-files` | string | - | `<cr>`-delimited `<package name>=<stage file path>` pairs. |
+| `dockerhub-namespace` | string | `""` | Docker Hub namespace for a bare (no `/`) `publish.docker.image` and for `stage-repository`. **An input, not a secret**: a secret's value is masked wherever it appears, and GitHub drops a job output holding one - `docker-images` would arrive empty. The `DOCKERHUB_NAMESPACE` secret is still read when this is empty. |
 | `git-app-client-id` | string | `""` | Client ID of a GitHub App whose token makes the release's git pushes - see [Pushing to a protected default branch](#-pushing-to-a-protected-default-branch). Needs `GIT_APP_PRIVATE_KEY`. |
 
 ## 🔐 Secrets
@@ -123,7 +126,8 @@ Trusted Publishing doesn't apply there.
 | --- | --- | --- |
 | `PERSONAL_ACCESS_TOKEN` | Optional | GitHub Packages auth, and `stage-repository` (a different repo, which the job's GITHUB_TOKEN cannot reach). **Not** used for git: the checkout and `rman version --push` use the job's own GITHUB_TOKEN - which is also why a release does not trigger a second run of itself - or the App token of `git-app-client-id`. |
 | `NPM_TOKEN` | Optional | npmjs.org auth token - omit once the package uses Trusted Publishing. |
-| `DOCKERHUB_NAMESPACE` / `DOCKERHUB_USERNAME` / `DOCKERHUB_PASS` | Optional | Required if any package targets `docker`, or `stage-repository` is set. |
+| `DOCKERHUB_USERNAME` / `DOCKERHUB_PASS` | Optional | Required if any package targets `docker`, or `stage-repository` is set. |
+| `DOCKERHUB_NAMESPACE` | Optional | Superseded by the `dockerhub-namespace` input, and read only when that is empty. |
 | `GIT_APP_PRIVATE_KEY` | Optional | Private key of the App named by `git-app-client-id`. |
 
 ## 📤 Outputs
@@ -133,6 +137,13 @@ Trusted Publishing doesn't apply there.
 | `released` | `"true"` when the run published at least one package. |
 | `packages` | `rman list --json`, compacted. |
 | `docker-images` | The Docker images this run pushed, as JSON: `[{"package","image","version","digest"}]`, `[]` when none. The digest is the pushed index's, taken from buildx in the same run. |
+
+**Pass the namespace as `dockerhub-namespace`, not as a secret.** GitHub refuses to hand a caller a
+job output containing any secret's value - the runner logs *"Skip output 'docker-images' since it
+may contain secret"* and the caller reads an empty string. Every image name carries its namespace,
+so a namespace passed as a secret empties `docker-images` on every run. The same holds for any other
+secret whose value happens to appear in an image or package name, such as a `DOCKERHUB_USERNAME`
+equal to the organization's name.
 
 **Deploy by `image@digest`, never by tag.** The digest comes from `rman publish --yes --json`
 (rman >= 2.31), which reports what buildx itself pushed - a tag read back from Docker Hub by a later

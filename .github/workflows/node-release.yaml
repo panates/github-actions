@@ -71,6 +71,10 @@ on:
       stage-files:
         description: "<cr> delimited pairing of <Package name=Stage files>"
         type: string
+      dockerhub-namespace:
+        description: 'Dockerhub namespace, for a bare (no "/") publish.docker.image and for stage-repository. Prefer this to the DOCKERHUB_NAMESPACE secret: a namespace is not secret, and as one every occurrence is masked - the image names in this workflow''s logs, and the docker-images output, which GitHub then drops because it "may contain secret"'
+        type: string
+        default: ""
       git-app-client-id:
         description: "Client ID of a GitHub App whose installation token makes the release's git pushes - the checkout, 'version --push' and its tags, the lockfile sync and the merge back into 'sync-branch'. For a default branch whose ruleset requires pull requests and lets only that App bypass it. Needs GIT_APP_PRIVATE_KEY too; empty (the default) keeps the job's own GITHUB_TOKEN. Those pushes then start workflow runs, which GITHUB_TOKEN pushes do not - see docs/node-release.md"
         type: string
@@ -83,7 +87,7 @@ on:
         description: "npmjs.org auth token - omit entirely once the package is registered as an npm Trusted Publisher (OIDC). npm.pkg.github.com auth always uses PERSONAL_ACCESS_TOKEN regardless, since Trusted Publishing is npmjs.org only"
         required: false
       DOCKERHUB_NAMESPACE:
-        description: 'Dockerhub namespace. Required if ''stage-repository'' defined, or a bare (no "/") publish.docker.image is used'
+        description: 'Dockerhub namespace - superseded by the dockerhub-namespace input, and read only when that is empty. A secret is masked wherever it appears, which drops the docker-images output'
         required: false
       DOCKERHUB_USERNAME:
         description: 'Dockerhub username. Required if any package''s .rmanrc "publish.target" includes "docker"'
@@ -260,7 +264,11 @@ jobs:
         id: publish
         working-directory: ${{ inputs.workspace }}
         env:
-          DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_NAMESPACE }}
+          # The input first: a value passed as a secret is masked everywhere it appears, and GitHub
+          # refuses to hand a job output holding one to the caller - docker-images, whose image
+          # names carry the namespace, would arrive empty. The secret stays for callers already
+          # passing it.
+          DOCKERHUB_NAMESPACE: ${{ inputs.dockerhub-namespace || secrets.DOCKERHUB_NAMESPACE }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS }}
           # **For a Dockerfile that installs from npm.pkg.github.com while the image builds**, which
@@ -445,7 +453,7 @@ jobs:
         uses: panates/github-actions/.github/actions/stage-deploy@v3
         with:
           packages: ${{ needs.release.outputs.packages }}
-          dockerhub-namespace: ${{ secrets.DOCKERHUB_NAMESPACE }}
+          dockerhub-namespace: ${{ inputs.dockerhub-namespace || secrets.DOCKERHUB_NAMESPACE }}
           docherhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
           docherhub-password: ${{ secrets.DOCKERHUB_PASS }}
           stage-files: ${{ inputs.stage-files }}
