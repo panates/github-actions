@@ -75,6 +75,10 @@ on:
         description: 'Dockerhub namespace, for a bare (no "/") publish.docker.image and for stage-repository. Prefer this to the DOCKERHUB_NAMESPACE secret: a namespace is not secret, and as one every occurrence is masked - the image names in this workflow''s logs, and the docker-images output, which GitHub then drops because it "may contain secret"'
         type: string
         default: ""
+      docker-gha-cache:
+        description: 'Expose the GitHub Actions cache to "rman publish", so a package''s .rmanrc "publish.docker.cache" can use buildx''s gha backend (type=gha). Opt-in: the step that does it hands the job''s runtime token to every step after it'
+        type: boolean
+        default: false
       git-app-client-id:
         description: "Client ID of a GitHub App whose installation token makes the release's git pushes - the checkout, 'version --push' and its tags, the lockfile sync and the merge back into 'sync-branch'. For a default branch whose ruleset requires pull requests and lets only that App bypass it. Needs GIT_APP_PRIVATE_KEY too; empty (the default) keeps the job's own GITHUB_TOKEN. Those pushes then start workflow runs, which GITHUB_TOKEN pushes do not - see docs/node-release.md"
         type: string
@@ -259,6 +263,16 @@ jobs:
           # Unconditional: a package may need its in-repo dependencies built even on a run that
           # ends up publishing nothing, and "Publish" below decides for itself what is actually due.
           ${{ inputs.build_script }}
+
+      # **Right before Publish, not at the top**, so the build script - the repository's own code -
+      # never sees the runtime token; only the publish and the steps after it do. buildx's gha cache
+      # reads ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL from its environment, and a plain shell
+      # step has neither unless something exports them - docker/build-push-action does it for
+      # itself, and rman runs buildx directly. Which cache a package uses is still its own
+      # `.rmanrc "publish.docker.cache"`; this only makes `type=gha` reachable.
+      - name: "Expose the GitHub Actions cache to buildx"
+        if: ${{ inputs.docker-gha-cache }}
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
 
       - name: "Publish"
         id: publish

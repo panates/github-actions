@@ -118,6 +118,7 @@ Trusted Publishing doesn't apply there.
 | `stage-repository` / `stage-repository-branch` | string | - / `"main"` | A separate manifest repo to update after a successful release. |
 | `stage-files` | string | - | `<cr>`-delimited `<package name>=<stage file path>` pairs. |
 | `dockerhub-namespace` | string | `""` | Docker Hub namespace for a bare (no `/`) `publish.docker.image` and for `stage-repository`. **An input, not a secret**: a secret's value is masked wherever it appears, and GitHub drops a job output holding one - `docker-images` would arrive empty. The `DOCKERHUB_NAMESPACE` secret is still read when this is empty. |
+| `docker-gha-cache` | boolean | `false` | Makes buildx's GitHub Actions cache reachable for `rman publish`, so a package's `.rmanrc "publish.docker.cache"` can say `type=gha`. Opt-in because the step behind it hands the job's runtime token to every step after it (the build script runs before it and never sees it). |
 | `git-app-client-id` | string | `""` | Client ID of a GitHub App whose token makes the release's git pushes - see [Pushing to a protected default branch](#-pushing-to-a-protected-default-branch). Needs `GIT_APP_PRIVATE_KEY`. |
 
 ## 🔐 Secrets
@@ -162,6 +163,22 @@ jobs:
           echo '${{ needs.release.outputs.docker-images }}' |
             jq -r '.[] | "\(.image)@\(.digest)"'
 ```
+
+## 🗄️ Docker layer cache
+
+rman passes a package's `.rmanrc "publish.docker.cache"` to buildx as `--cache-from` / `--cache-to`.
+For GitHub's own cache, turn on `docker-gha-cache` here and give each image its own scope:
+
+```yaml
+# packages/server/.rmanrc.yml
+publish:
+  docker:
+    cache: "${{ env.GITHUB_ACTIONS ? { from: 'type=gha,scope=server', to: 'type=gha,mode=max,scope=server' } : undefined }}"
+```
+
+Outside Actions the expression is unset and no cache flags are passed, so a local `rman publish`
+is unaffected. Without `docker-gha-cache`, buildx has no runtime token and the `gha` cache cannot
+be reached.
 
 ## 🛡️ Pushing to a protected default branch
 
