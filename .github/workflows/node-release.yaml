@@ -241,7 +241,8 @@ jobs:
       # Runs whatever `version` did - it also repairs a lockfile that drifted in an earlier release,
       # and is a no-op when there is nothing to sync. The push does not re-trigger this workflow,
       # since GITHUB_TOKEN pushes deliberately do not start workflow runs - an App token's
-      # ('git-app-client-id') do, and the caller skips them by commit message.
+      # ('git-app-client-id') do, so the message carries `[skip ci]`: GitHub starts no run for it,
+      # rather than one the caller's `if:` skips and the run list shows all the same.
       - name: "Sync the lockfile to the versions Version wrote"
         working-directory: ${{ inputs.workspace }}
         run: |
@@ -251,7 +252,7 @@ jobs:
             echo "Lockfile already matches the manifests - nothing to sync."
           else
             git add package-lock.json
-            git commit -m "chore: sync lockfile"
+            git commit -m "chore: sync lockfile [skip ci]"
             git push
             echo "Committed the regenerated lockfile."
           fi
@@ -416,18 +417,19 @@ jobs:
             exit 0
           }
 
-          # `no-test` in the message, and it is not superstition: a push made with the job's own
+          # `[skip ci]` in the message, and it is not superstition: a push made with the job's own
           # GITHUB_TOKEN starts no workflow at all, but one made with a GitHub App token
-          # ('git-app-client-id') gets a real push event - and re-running a whole test matrix over commits that just
-          # passed it is the one cost this step could otherwise add. Every test.yml here honours the
-          # keyword.
+          # ('git-app-client-id') gets a real push event - and re-running a whole test matrix over
+          # commits that just passed it is the one cost this step could otherwise add. With
+          # `[skip ci]` GitHub starts no run at all; `no-test`, which a test.yml had to honour, still
+          # left a skipped run in the list.
           if ! git merge --no-ff "$released" -m "Merge branch '$RELEASED_FROM' into $SYNC_BRANCH: the release commits
 
           The version bump, the source stamps and the changelog entry are written on
           '$RELEASED_FROM' by \`rman version\`. Merging them back keeps this branch reporting the
           version that actually shipped, and keeps the next pull request carrying only its own work.
 
-          no-test"; then
+          [skip ci]"; then
             git merge --abort 2>/dev/null
             echo "::warning::\"$SYNC_BRANCH\" conflicts with the release commits, so it was left alone. Merge \"$RELEASED_FROM\" into it by hand."
             exit 0

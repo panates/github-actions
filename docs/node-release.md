@@ -207,9 +207,16 @@ and used for the checkout and every push after it. **A second one is minted just
 back into `sync-branch`**: an installation token lasts an hour, and the build and the publishes in
 between - Docker images included - can take longer.
 
-**Those pushes start workflow runs**, which a `GITHUB_TOKEN` push never does. The merge back carries
-`no-test`; the release and lockfile commits on the default branch reach your own `release.yml`, so
-skip them there by message:
+**Those pushes start workflow runs**, which a `GITHUB_TOKEN` push never does. The lockfile sync and
+the merge back carry `[skip ci]`, so GitHub starts none for them. The release commits are
+`rman version`'s: give them `[skip ci]` too in your `.rmanrc`
+
+```yaml
+version:
+  commitMessage: 'chore(release): v{version} [skip ci]'
+```
+
+or skip them in your own `release.yml` by message - a run is still listed, skipped:
 
 ```yaml
 jobs:
