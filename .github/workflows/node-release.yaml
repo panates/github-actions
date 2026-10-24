@@ -49,6 +49,10 @@ on:
         description: 'Scopes to route to npm.pkg.github.com (comma separated), or "auto". Needed only to INSTALL a dependency hosted there - publishing is routed by each package''s own publishConfig.registry and authenticated by PERSONAL_ACCESS_TOKEN'
         type: string
         required: false
+      package-manager:
+        description: '"npm" or "pnpm". Empty (the default) lets panates/gh-setup-node detect it from the committed lockfile - pnpm for a pnpm-lock.yaml, npm otherwise - which is also the lockfile the release keeps in step after a bump'
+        type: string
+        default: ""
       sync-branch:
         description: 'Long-lived working branch to merge the release commits back into, or "" to skip. The release writes the bump, the stamps and the changelog onto the default branch only, so a branch that never receives them drifts a release further behind every time - measured on one repository at 66 commits, where the root''s version had changed in kind (0.13.5 -> a calendar identity) without its dev ever hearing about it. A branch that does not exist is skipped in silence'
         type: string
@@ -144,6 +148,7 @@ jobs:
       # `npx rman@<major>`. They agreed only by accident, and would part company the moment a new
       # rman major reached `latest`: the build would jump while version and publish stayed behind.
       - name: "Setup Environment"
+        id: setup
         uses: panates/gh-setup-node@v2
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
@@ -153,6 +158,7 @@ jobs:
           npm-token: ${{ secrets.NPM_TOKEN }}
           rman-version: ${{ env.RMAN_VERSION }}
           install: "ci"
+          package-manager: ${{ inputs.package-manager }}
           # Empty without an App, which leaves the checkout on the job's own GITHUB_TOKEN.
           git-token: ${{ steps.git-token.outputs.token }}
 
@@ -243,18 +249,33 @@ jobs:
       # since GITHUB_TOKEN pushes deliberately do not start workflow runs - an App token's
       # ('git-app-client-id') do, so the message carries `[skip ci]`: GitHub starts no run for it,
       # rather than one the caller's `if:` skips and the run list shows all the same.
+      #
+      # **The lockfile of the package manager the setup step installed with.** For pnpm it is
+      # pnpm-lock.yaml, refreshed with `--lockfile-only`; `--no-frozen-lockfile` has to be said
+      # because pnpm freezes the lockfile by itself wherever `CI` is set. A pnpm workspace whose
+      # packages depend on each other through `workspace:*` usually has nothing to sync - the lock
+      # records those as links, without a version (measured on panates/peacox-ui: a bump left it
+      # byte-identical) - and the step then says so and commits nothing.
       - name: "Sync the lockfile to the versions Version wrote"
         working-directory: ${{ inputs.workspace }}
+        env:
+          PACKAGE_MANAGER: ${{ steps.setup.outputs.package-manager }}
         run: |
           set -euo pipefail
-          npm install --package-lock-only
-          if git diff --quiet -- package-lock.json; then
-            echo "Lockfile already matches the manifests - nothing to sync."
+          if [ "$PACKAGE_MANAGER" = pnpm ]; then
+            lockfile=pnpm-lock.yaml
+            pnpm install --lockfile-only --no-frozen-lockfile
           else
-            git add package-lock.json
+            lockfile=package-lock.json
+            npm install --package-lock-only
+          fi
+          if git diff --quiet -- "$lockfile"; then
+            echo "$lockfile already matches the manifests - nothing to sync."
+          else
+            git add "$lockfile"
             git commit -m "chore: sync lockfile [skip ci]"
             git push
-            echo "Committed the regenerated lockfile."
+            echo "Committed the regenerated $lockfile."
           fi
 
       - name: "Build"

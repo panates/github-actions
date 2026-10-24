@@ -53,7 +53,9 @@ jobs:
       DOCKERHUB_PASS: ${{ secrets.DOCKERHUB_PASS }}
 ```
 
-Your repo needs a valid `.rmanrc`/`package.json#rman` (npm/yarn `workspaces` for a monorepo) - see
+Your repo needs a valid `.rmanrc`/`package.json#rman` (npm/yarn `workspaces` for a monorepo - a pnpm
+monorepo lists the same globs there too, since rman reads that field and not `pnpm-workspace.yaml`,
+and sets `packageManager: { node: pnpm }` in its root `.rmanrc`) - see
 [rman's own docs](https://github.com/panates/rman#readme). Nothing else is required for npm
 publishing; Docker publishing additionally needs each docker-shipping package's own
 `"publish.target": ["docker"]` + `"publish.docker"` config (image name, platforms, ...). Two
@@ -114,6 +116,7 @@ Trusted Publishing doesn't apply there.
 | `workspace` | string | `${{ github.workspace }}` | Working directory for every step. |
 | `node-version` | string | `"24"` | Node.js version. **Not the setup action's `lts/*`**: Node 22 LTS ships npm 10, which has no Trusted Publishing support at all, so a publish with no `NPM_TOKEN` fails with `ENEEDAUTH` instead of reaching for OIDC. Node 24 ships npm 11.19. |
 | `github-registries` | string | - | Scopes to **route** to npm.pkg.github.com, or `"auto"`. Needed only to *install* a dependency hosted there - publishing is routed by each package's own `publishConfig.registry` and authenticated by `PERSONAL_ACCESS_TOKEN`, neither of which needs a scope list. |
+| `package-manager` | string | `""` | `"npm"` or `"pnpm"`. Empty detects it from the committed lockfile (pnpm for `pnpm-lock.yaml`, npm otherwise) - it installs with that tool, and the post-bump lockfile sync refreshes that tool's lockfile. Existing npm repositories need nothing. |
 | `cache-key` / `cache-path` | string | - | Restores a GitHub Actions cache before building (unrelated to rman - e.g. large downloaded binaries a Dockerfile's build context needs). |
 | `stage-repository` / `stage-repository-branch` | string | - / `"main"` | A separate manifest repo to update after a successful release. |
 | `stage-files` | string | - | `<cr>`-delimited `<package name>=<stage file path>` pairs. |

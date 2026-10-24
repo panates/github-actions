@@ -34,6 +34,10 @@ on:
         description: 'Scopes to route to npm.pkg.github.com (comma separated), or "auto" - needed only to install a dependency hosted there'
         type: string
         required: false
+      package-manager:
+        description: '"npm" or "pnpm". Empty (the default) lets panates/gh-setup-node detect it from the committed lockfile. A pnpm repository will usually want a qc_script of its own too - the default runs npm'
+        type: string
+        default: ""
     secrets:
       PERSONAL_ACCESS_TOKEN:
         description: "Github personal access token - needed only for npm.pkg.github.com"
@@ -60,6 +64,7 @@ jobs:
           node-version: ${{ inputs.node-version }}
           github-registries: ${{ inputs.github-registries }}
           install: ${{ inputs.install }}
+          package-manager: ${{ inputs.package-manager }}
           rman-version: ${{ env.RMAN_VERSION }}
 
       - name: Run QC Tests
