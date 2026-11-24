@@ -1,0 +1,156 @@
+name: Coverage Publish
+
+# Sends the coverage of **the code being released** to Coveralls, from the release workflow - so
+# Coveralls' release branch (`main`) shows what was released, under the release's own commit.
+#
+# **Why not from the test run, as every repository did.** Tests run on `dev`, and a release merged
+# from `dev` is not tested again (see pr-source.yaml), so the release branch never ran a suite and
+# never uploaded. Measured on panates/rman: Coveralls' `main` last received a build on 2026-10-19
+# (74de502, 94.85%) while `dev` was at 95.02% on 2026-11-24 - coveralls.io showed a month-old
+# number. Uploading from `dev` under the branch name `main` was weighed and set aside: it shows a
+# `dev` commit on `main`, and moves `main`'s number before anything is released.
+#
+# So the test run keeps its report as an artifact, and this workflow fetches it:
+#
+#   - **from the test run of the pull request's head commit**, when `pr-number` is given - the commit
+#     `dev` tested, which is the code the merge brought in. Looked up by that exact SHA, never as
+#     "the latest successful run": a push to `dev` while the release runs would otherwise send the
+#     coverage of code that was not released;
+#   - **from this run**, when it is empty - a release whose own `test` job ran and uploaded it.
+#
+# **It never fails a release.** No run for that SHA (a `no-test` push, an expired artifact), no
+# artifact, or Coveralls refusing: each warns and ends the job green. Coverage is a report, not a
+# gate.
+#
+# Usage - the test workflow uploads the report:
+#
+#       - name: Keep the coverage report for the release
+#         if: ${{ matrix.node == '24' }}
+#         uses: actions/upload-artifact@v7
+#         with:
+#           name: coverage
+#           path: coverage/lcov.info
+#
+# and the release workflow publishes it:
+#
+#   jobs:
+#     source:
+#       uses: panates/github-actions/.github/workflows/pr-source.yaml@v3
+#       ...
+#     test:
+#       needs: source
+#       if: needs.source.outputs.head-ref != 'dev'
+#       uses: ./.github/workflows/test.yml
+#
+#     coverage:
+#       needs: [source, test]
+#       if: >
+#         always() && !cancelled() &&
+#         needs.source.result == 'success' &&
+#         (needs.test.result == 'success' ||
+#          (needs.test.result == 'skipped' && needs.source.outputs.head-ref == 'dev'))
+#       uses: panates/github-actions/.github/workflows/coverage-publish.yaml@v3
+#       permissions:
+#         actions: read
+#         contents: read
+#         pull-requests: read
+#       with:
+#         pr-number: ${{ needs.source.outputs.head-ref == 'dev' && needs.source.outputs.pr-number || '' }}
+#
+# Point the README badge at the release branch: `https://img.shields.io/coveralls/<org>/<repo>/main.svg`.
+
+on:
+  workflow_call:
+    inputs:
+      pr-number:
+        description: "The pull request this release came from (pr-source.yaml's `pr-number`). Its head commit's test run holds the report. Empty: the report is this run's own"
+        type: string
+        default: ""
+      workflow:
+        description: "The file name of the workflow whose run uploads the report"
+        type: string
+        default: "test.yml"
+      artifact:
+        description: "The artifact's name"
+        type: string
+        default: "coverage"
+      file:
+        description: "The report's file name inside the artifact"
+        type: string
+        default: "lcov.info"
+
+permissions:
+  actions: read        # find the test run and download its artifact
+  contents: read
+  pull-requests: read  # the pull request's head commit
+
+jobs:
+  # ***********************************
+  # Job: Coverage Publish
+  # ***********************************
+  publish:
+    name: "Coverage Publish"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Which run holds the report: the head commit's test run, or this run (`run-id` empty).
+      - name: "Find the test run of the released commit"
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ inputs.pr-number }}
+          WORKFLOW: ${{ inputs.workflow }}
+        run: |
+          # No `set -e`: every failure path ends in `found=false`, which skips the upload.
+          set -uo pipefail
+          if [ -z "$PR" ]; then
+            echo "No pull request given - publishing this run's own report."
+            echo "run-id=" >> "$GITHUB_OUTPUT"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          sha=$(gh api "repos/$REPO/pulls/$PR" -q .head.sha 2>&1) || {
+            echo "::warning::Could not read pull request #$PR, so no coverage is published. $sha"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          id=$(gh api "repos/$REPO/actions/workflows/$WORKFLOW/runs?head_sha=$sha&status=success&per_page=1" \
+            -q '.workflow_runs[0].id // ""' 2>&1) || id=''
+          if ! [[ "$id" =~ ^[0-9]+$ ]]; then
+            echo "::warning::No successful $WORKFLOW run for $sha (#$PR's head), so no coverage is published."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "#$PR's head $sha was tested by run $id."
+          echo "run-id=$id" >> "$GITHUB_OUTPUT"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      # The report's paths are relative to the repository root, and the reporter reads the source
+      # files beside them - the released tree is the tested one, so this run's commit serves.
+      - uses: actions/checkout@v7
+        if: steps.run.outputs.found == 'true'
+
+      - name: "Download the report"
+        id: download
+        if: steps.run.outputs.found == 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact }}
+          path: .coverage-artifact
+          run-id: ${{ steps.run.outputs.run-id }}
+          github-token: ${{ steps.run.outputs.run-id && github.token || '' }}
+
+      - name: "Warn when there is no report"
+        if: steps.run.outputs.found == 'true' && steps.download.outcome != 'success'
+        run: echo "::warning::No \"${{ inputs.artifact }}\" artifact in the test run, so no coverage is published."
+
+      # Branch and commit are this run's own: the release branch, and the commit it released.
+      - name: "Send it to Coveralls"
+        if: steps.download.outcome == 'success'
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ github.token }}
+          file: .coverage-artifact/${{ inputs.file }}
+          fail-on-error: false

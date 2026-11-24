@@ -23,6 +23,11 @@ configured registry).
   [node-release.yaml](./docs/node-release.md)
 
 
+- Coverage Publish Workflow
+
+  [coverage-publish.yaml](./docs/coverage-publish.md)
+
+
 - Sonar Analysis Workflow
   
   [sonar.yaml](./docs/sonar.md)
