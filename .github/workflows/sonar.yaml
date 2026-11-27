@@ -12,6 +12,10 @@ on:
         description: "Sonar access token"
         required: true
 
+# Only the checkout. The scanner reaches Sonar with SONAR_TOKEN, not with the job's token.
+permissions:
+  contents: read
+
 jobs:
   sonar-analysis:
     name: "Sonar Analysis"

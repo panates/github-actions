@@ -47,6 +47,11 @@ jobs:
   # ***********************************
   # Job: Quality Check
   # ***********************************
+# The checkout inside panates/gh-setup-node is all this workflow needs the token for; a caller
+# whose own job grants more does not widen it.
+permissions:
+  contents: read
+
   qc:
     name: Quality Check
     runs-on: ubuntu-latest
