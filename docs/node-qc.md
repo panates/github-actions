@@ -42,6 +42,7 @@ jobs:
 | `install` | string | `"ci"` | `"ci"` (from the lockfile), `"install"` (resolve fresh), or `"false"` (skip). |
 | `github-registries` | string | - | Scopes to route to npm.pkg.github.com, or `"auto"` - needed only to install a dependency hosted there. |
 | `package-manager` | string | `""` | `"npm"` or `"pnpm"`. Empty detects it from the committed lockfile. A pnpm repository usually sets `qc_script` too - its default, `npm run qc`, runs npm. |
+| `cache` | string | `"true"` | Caches the package manager's download cache (`~/.npm`, or pnpm's store), keyed by the lockfile. **Set `"false"` in a repository that commits no lockfile**: `setup-node` has nothing to hash and fails with `Dependencies lock file is not found` before anything installs. Such a repository also needs `install: "install"` or `"false"`. |
 
 ## 🔐 Secrets
 

@@ -53,6 +53,10 @@ on:
         description: '"npm" or "pnpm". Empty (the default) lets panates/gh-setup-node detect it from the committed lockfile - pnpm for a pnpm-lock.yaml, npm otherwise - which is also the lockfile the release keeps in step after a bump'
         type: string
         default: ""
+      cache:
+        description: 'Cache the package manager''s download cache (npm''s, or pnpm''s store), keyed by the lockfile - unrelated to the cache-key/cache-path pair below, which restores a cache of the repository''s own. "false" turns it off: for a runner with no cache service, or to keep infrequent release runs out of a cache quota the QC runs share. It is not a way to release without a lockfile - the install here is always "ci", which needs one'
+        type: string
+        default: "true"
       sync-branch:
         description: 'Long-lived working branch to merge the release commits back into, or "" to skip. The release writes the bump, the stamps and the changelog onto the default branch only, so a branch that never receives them drifts a release further behind every time - measured on one repository at 66 commits, where the root''s version had changed in kind (0.13.5 -> a calendar identity) without its dev ever hearing about it. A branch that does not exist is skipped in silence'
         type: string
@@ -171,6 +175,7 @@ jobs:
           rman-version: ${{ env.RMAN_VERSION }}
           install: "ci"
           package-manager: ${{ inputs.package-manager }}
+          cache: ${{ inputs.cache }}
           # Empty without an App, which leaves the checkout on the job's own GITHUB_TOKEN.
           git-token: ${{ steps.git-token.outputs.token }}
 

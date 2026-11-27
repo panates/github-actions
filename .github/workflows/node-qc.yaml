@@ -38,20 +38,24 @@ on:
         description: '"npm" or "pnpm". Empty (the default) lets panates/gh-setup-node detect it from the committed lockfile. A pnpm repository will usually want a qc_script of its own too - the default runs npm'
         type: string
         default: ""
+      cache:
+        description: 'Cache the package manager''s download cache (npm''s, or pnpm''s store), keyed by the lockfile. Set to "false" in a repository that commits no lockfile at all: setup-node has nothing to hash and fails outright with "Dependencies lock file is not found" before anything installs - which also needs install "install" or "false", since `npm ci` requires a lockfile too'
+        type: string
+        default: "true"
     secrets:
       PERSONAL_ACCESS_TOKEN:
         description: "Github personal access token - needed only for npm.pkg.github.com"
         required: false
 
-jobs:
-  # ***********************************
-  # Job: Quality Check
-  # ***********************************
 # The checkout inside panates/gh-setup-node is all this workflow needs the token for; a caller
 # whose own job grants more does not widen it.
 permissions:
   contents: read
 
+jobs:
+  # ***********************************
+  # Job: Quality Check
+  # ***********************************
   qc:
     name: Quality Check
     runs-on: ubuntu-latest
@@ -70,6 +74,7 @@ permissions:
           github-registries: ${{ inputs.github-registries }}
           install: ${{ inputs.install }}
           package-manager: ${{ inputs.package-manager }}
+          cache: ${{ inputs.cache }}
           rman-version: ${{ env.RMAN_VERSION }}
 
       - name: Run QC Tests
