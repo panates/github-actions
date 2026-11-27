@@ -1,7 +1,13 @@
 node_modules
 
+# Build output
+build/
+*.tsbuildinfo
+
 # environment variables
 .env
+.env.*
+!.env.example
 
 # Logs
 logs
@@ -13,6 +19,17 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# Claude Code: .claude/settings.json is shared and committed, these are local
+# (.claude/local/ holds the handoff note between sessions)
+.claude/settings.local.json
+.claude/worktrees/
+.claude/local/
+graphify-out
 
 
 # IDEs and editors
