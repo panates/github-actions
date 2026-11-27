@@ -1,6 +1,9 @@
 {
   "private": true,
   "version": "3.0.0",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "prepare": "husky",
     "lint": "eslint . --max-warnings=0",
